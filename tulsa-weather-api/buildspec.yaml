@@ -15,4 +15,9 @@ phases:
       - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-api
       - npm install
       - npm run build
-      - npm run deploy
+      - cd ../tulsa-weather-backend
+      - npm run cdk deploy LambdaDeployment --require-approval never --outputs-file ../tulsa-weather-app/src/apiConfig.json
+      - cd ../tulsa-weather-app
+      - npm run build
+      - cd ../tulsa-weather-backend
+      - cdk deploy ReactDeployment --require-approval never

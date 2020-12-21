@@ -1,5 +1,5 @@
 import axios from 'axios'
-import config from '../aws_config.json'
+import config from '../apiConfig.json'
 import { WeatherResponse } from 'openweathermap-api-client'
 
 class TulsaWeatherClient{
