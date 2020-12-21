@@ -1,4 +1,5 @@
-import simpleGit from 'simple-git'
+import simpleGit from 'simple-git';
+import {} from 'aws-sdk';
 
 const git = simpleGit('../')
 

@@ -16,8 +16,8 @@ phases:
       - npm install
       - npm run build
       - cd ../tulsa-weather-backend
-      - npm run cdk deploy LambdaDeployment --require-approval never --outputs-file ../tulsa-weather-app/src/apiConfig.json
+      - npm run cdk deploy LambdaDeployment -- --require-approval never --outputs-file ../tulsa-weather-app/src/apiConfig.json
       - cd ../tulsa-weather-app
       - npm run build
       - cd ../tulsa-weather-backend
-      - cdk deploy ReactDeployment --require-approval never
+      - npm run cdk deploy ReactDeployment -- --require-approval never
