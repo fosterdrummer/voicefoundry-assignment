@@ -11,7 +11,9 @@ phases:
   build:
     commands:
       - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-api/handler
-      - npm run build_all
+      - npm run build
+      - cd ../cdk
+      - npm run cdk synth -- --require-approval never
 artifacts:
   bas-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-api/cdk/cdk.out
   files:
