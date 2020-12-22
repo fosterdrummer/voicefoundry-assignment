@@ -15,6 +15,6 @@ phases:
       - cd ../cdk
       - npm run cdk synth -- --require-approval never
 artifacts:
-  bas-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-api/cdk/cdk.out
+  base-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-api/cdk/cdk.out
   files:
   - TulsaWeatherApiDeployment.template.json

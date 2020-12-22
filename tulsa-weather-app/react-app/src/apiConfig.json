@@ -1,5 +1,5 @@
 {
-  "LambdaDeployment": {
+  "TulsaWeatherApiDeployment": {
     "ServiceApiEndpoint55B38F80": "https://45cd89msgg.execute-api.us-east-1.amazonaws.com/prod/",
     "apiUrl": "https://45cd89msgg.execute-api.us-east-1.amazonaws.com/prod/"
   }
