@@ -16,12 +16,10 @@ const deployPipeline = new FullStackDeployPipeline(app, 'TulsaWeatherAppDeployPi
     appBuildConfig: {
         projectName: 'tulsa-weather-app-build',
         buildSpecPath: 'tulsa-weather-app/cdk/buildspec.yaml',
-        stackName: 'TulsaWeatherAppDeployment'
     },
     apiBuildConfig: {
         projectName: 'tulsa-weather-api-build',
         buildSpecPath: 'tulsa-weather-api/cdk/buildspec.yaml',
-        stackName: 'TulsaWeatherApiDeployment'
     }
 });
 

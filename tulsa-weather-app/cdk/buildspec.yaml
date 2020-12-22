@@ -4,7 +4,7 @@ env:
     CDK_SRC_DIR: tulsa-weather-app/cdk
     HANDLER_SRC_DIR: tulsa-weather-app/handler
   parameter-store:
-    API_URL: tulsa-weather-app/api-url
+    API_URL: /tulsa-weather-api/api-url
 phases:
   install:
     runtime_versions:

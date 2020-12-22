@@ -36,7 +36,7 @@ export class FullStackDeployPipeline extends cdk.Stack{
             trigger: cpActions.CodeCommitTrigger.NONE
         });
 
-        const pipeline = new cp.Pipeline(this, 'FullStackPipeline', {
+        new cp.Pipeline(this, 'FullStackPipeline', {
             pipelineName: props.pipelineName,
             stages: [{
                 stageName: "Source",
