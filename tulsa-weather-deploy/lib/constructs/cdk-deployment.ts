@@ -4,8 +4,8 @@ import * as cp from '@aws-cdk/aws-codepipeline';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
 import * as iam from '@aws-cdk/aws-iam';
 
-const CFN_ACCESS = iam.ManagedPolicy
-    .fromAwsManagedPolicyName('AWSCloudFormationFullAccess');
+const ALL_THE_ACCESS = iam.ManagedPolicy
+    .fromAwsManagedPolicyName('AdministratorAccess');
 
 export type CdkDeploymentProps = {
     readonly buildProjectName: string,
@@ -40,7 +40,7 @@ export class CdkDeployment extends cdk.Construct{
             }
         })
 
-        project.role?.addManagedPolicy(CFN_ACCESS)
+        project.role?.addManagedPolicy(ALL_THE_ACCESS)
 
         if(!props.inputs) props.inputs = []
 

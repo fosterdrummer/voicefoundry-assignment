@@ -2,7 +2,7 @@ import * as cdk from '@aws-cdk/core';
 import * as cc from '@aws-cdk/aws-codecommit';
 import * as cp from '@aws-cdk/aws-codepipeline';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
-import { CdkDeployment } from '../constructs/deploy-project'
+import { CdkDeployment } from '../constructs/cdk-deployment'
 
 export type BuildConfig = {
     readonly projectName: string
