@@ -1,0 +1,18 @@
+version: 0.2
+phases:
+  install:
+    runtime_versions:
+      nodejs: 12
+    commands:
+     - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-app/cdk
+     - npm install
+     - cd ../react-app
+     - npm install
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-app/react-app
+      - npm run build_all
+artifacts:
+  bas-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-app/cdk/cdk.out
+  files:
+  - TulsaWeatherAppDeployment.template.json

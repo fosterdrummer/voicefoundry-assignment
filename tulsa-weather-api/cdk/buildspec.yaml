@@ -1,0 +1,18 @@
+version: 0.2
+phases:
+  install:
+    runtime_versions:
+      nodejs: 12
+    commands:
+     - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-api/cdk
+     - npm install
+     - cd ../handler
+     - npm install
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-api/handler
+      - npm run build_all
+artifacts:
+  bas-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-api/cdk/cdk.out
+  files:
+  - TulsaWeatherApiDeployment.template.json

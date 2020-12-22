@@ -1,6 +1,0 @@
-{
-  "LambdaDeployment": {
-    "ServiceApiEndpoint55B38F80": "https://zedcsa4mje.execute-api.us-east-1.amazonaws.com/prod/",
-    "apiUrl": "https://x95p733l3i.execute-api.us-east-1.amazonaws.com/prod"
-  }
-}
