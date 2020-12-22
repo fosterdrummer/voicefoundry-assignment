@@ -7,6 +7,7 @@
     "prepare": "tsc",
     "build": "tsc",
     "build_all": "npm run build && cd ../cdk && cdk synth --require-approval never",
+    "deploy": "npm run build && cd ../cdk && cdk deploy --require-approval never",
     "start": "ts-node src/index.ts"
   },
   "keywords": [],

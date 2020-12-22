@@ -1,18 +1,22 @@
 version: 0.2
+env:
+  variables:
+    CDK_SRC_DIR: tulsa-weather-app/cdk
+    HANDLER_SRC_DIR: tulsa-weather-app/handler
+  parameter-store:
+    API_URL: tulsa-weather-app/api-url
 phases:
   install:
     runtime_versions:
       nodejs: 12
     commands:
-     - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-app/cdk
+     - cd ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}
      - npm install
-     - cd ../react-app
+     - cd ${CODEBUILD_SRC_DIR}/${HANDLER_SRC_DIR}
      - npm install
   build:
     commands:
-      - cd ${CODEBUILD_SRC_DIR}/tulsa-weather-app/react-app
-      - npm run build_all
-artifacts:
-  bas-directory: ${CODEBUILD_SRC_DIR}/tulsa-weather-app/cdk/cdk.out
-  files:
-  - TulsaWeatherAppDeployment.template.json
+      - cd ${CODEBUILD_SRC_DIR}/${HANDLER_SRC_DIR}
+      - REACT_APP_OWM_API_URL=${API_URL} npm run build
+      - cd ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}
+      - npm run cdk deploy -- --require-approval never

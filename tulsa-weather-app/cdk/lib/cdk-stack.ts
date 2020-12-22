@@ -23,7 +23,6 @@ export class S3AppDeployment extends cdk.Stack {
       retainOnDelete: false,
       destinationBucket: bucket
     })
-
     new cdk.CfnOutput(this, 'AppUrl', {
       value: bucket.bucketWebsiteUrl
     })

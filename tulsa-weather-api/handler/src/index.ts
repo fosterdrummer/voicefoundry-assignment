@@ -8,8 +8,13 @@ import {
     WeatherResponse
 } from 'openweathermap-api-client'
 
-const WEATHER_API_KEY = '113161f05470d59fa6f2c364d7f2a897'
-const TULSA_ID = 4553433
+const getEnvForTypeScript = function(name: string): string {
+    const val = process.env[name];
+    return val ? val: '';
+}
+
+const WEATHER_API_KEY = getEnvForTypeScript('OPEN_WEATHER_MAP_API_KEY');
+const TULSA_ID = parseInt(getEnvForTypeScript('OPEN_WEATHER_MAP_CITY_ID'));
 
 const ownClient = new OwmApiClient({
     apiKey: WEATHER_API_KEY,
