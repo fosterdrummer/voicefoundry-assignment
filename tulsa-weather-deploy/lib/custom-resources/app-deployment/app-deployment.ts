@@ -16,7 +16,8 @@ const getBuildAndReleaseArtifacts = function(){
 }
 
 type GenericDeploymentProps = {
-    sourceProvider(output: cp.Artifact): cpActions.Action
+    useCdkSourceProvider: boolean
+    sourceProvider?(output: cp.Artifact): cpActions.Action
     readonly sourceBuildSpec: cb.BuildSpec
 }
 
@@ -82,9 +83,7 @@ export class AppDeployment extends cdk.Resource{
             stages: [{
                 stageName: 'Source',
                 actions: [
-                    props.cdkSourceProvider(artifacts.cdk.source),
-                    props.frontEndProps.sourceProvider(artifacts.frontEnd.source),
-                    props.apiProps.sourceProvider(artifacts.api.source)
+                    props.cdkSourceProvider(artifacts.cdk.source)
                 ]
             }, {
                 stageName: 'BuildApi',
@@ -93,7 +92,7 @@ export class AppDeployment extends cdk.Resource{
                         actionName: 'BuildApiRelease',
                         buildProjectName: `${props.appName}-api-source-build-${props.stageName}`,
                         buildSpec: props.apiProps.sourceBuildSpec,
-                        input: artifacts.api.source,
+                        input: artifacts.cdk.source,
                         outputs: [artifacts.api.release]
                     }),
                     generateAppDeploymentBuildAction(this, {
@@ -129,7 +128,7 @@ export class AppDeployment extends cdk.Resource{
                                 value: apiStage.apiUrlParameterName
                             }
                         },
-                        input: artifacts.frontEnd.source,
+                        input: artifacts.cdk.source,
                         outputs: [artifacts.frontEnd.release]
                     })
                 ]
