@@ -12,14 +12,17 @@ const sourceControl = new SourceControl(app, 'TulsaWeatherAppSourceControl', {
 
 const deployPipeline = new FullStackDeployPipeline(app, 'TulsaWeatherAppDeployPipeline', {
     pipelineName: 'tulsa-weather-app-deploy-pipeline',
+    pipelineStage: 'Prod',
     sourceRepo: sourceControl.codeRepo.repo,
     appBuildConfig: {
         projectName: 'tulsa-weather-app',
         buildSpecPath: 'tulsa-weather-app/cdk/buildspec.yaml',
+        stackName: 'TulsaWeatherApiDeployment'
     },
     apiBuildConfig: {
         projectName: 'tulsa-weather-api',
         buildSpecPath: 'tulsa-weather-api/cdk/buildspec.yaml',
+        stackName: 'TulsaWeatherAppDeployment'
     }
 });
 

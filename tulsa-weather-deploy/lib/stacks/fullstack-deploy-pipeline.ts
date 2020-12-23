@@ -4,6 +4,7 @@ import * as cp from '@aws-cdk/aws-codepipeline';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
 import * as iam from '@aws-cdk/aws-iam'
 import * as cb from '@aws-cdk/aws-codebuild';
+import { string1To1000 } from 'aws-sdk/clients/customerprofiles';
 
 const ALL_THE_ACCESS = iam.ManagedPolicy
     .fromAwsManagedPolicyName('AdministratorAccess');
@@ -11,9 +12,11 @@ const ALL_THE_ACCESS = iam.ManagedPolicy
 export type BuildConfig = {
     readonly projectName: string
     readonly buildSpecPath: string
+    readonly stackName: string
 }
 
 export interface FullStackDeployPipelineProps extends cdk.StackProps{
+    readonly pipelineStage: string
     readonly sourceRepo: cc.Repository
     readonly pipelineName: string
     readonly apiBuildConfig: BuildConfig
@@ -23,39 +26,31 @@ export interface FullStackDeployPipelineProps extends cdk.StackProps{
 export class FullStackDeployPipeline extends cdk.Stack{
 
     sourceCode: cp.Artifact
+    pipelineStage: string 
 
     constructor(scope: cdk.Construct, id: string, props: FullStackDeployPipelineProps){
         super(scope, id, props);
-
+        this.pipelineStage = props.pipelineStage
         this.sourceCode = new cp.Artifact('SourceCode');
-
         const checkoutSourceCode = new cpActions.CodeCommitSourceAction({
             actionName: 'Source',
             repository: props.sourceRepo,
             output: this.sourceCode,
             trigger: cpActions.CodeCommitTrigger.NONE
         });
-
-        new cp.Pipeline(this, 'FullStackPipeline', {
+        const pipeline = new cp.Pipeline(this, 'FullStackPipeline', {
             pipelineName: props.pipelineName,
             stages: [{
                 stageName: "Source",
                 actions: [checkoutSourceCode]
-            }, {
-                stageName: "DeployApi",
-                actions: [
-                    this.generateDeployAction(props.apiBuildConfig)
-                ]
-            }, {
-                stageName: "DeployApp",
-                actions: [
-                    this.generateDeployAction(props.appBuildConfig)
-                ]
             }]
         });
+        this.addDeployStage(props.apiBuildConfig, pipeline);
+        this.addDeployStage(props.appBuildConfig, pipeline);
     }
 
-    generateDeployAction(buildConfig: BuildConfig): cpActions.CodeBuildAction {
+    addDeployStage(buildConfig: BuildConfig, pipeline: cp.Pipeline): void {
+        const cfnArtifact = new cp.Artifact(`${buildConfig.projectName}-cfn-bundle`)
         const project = new cb.PipelineProject(this, `CodeBuildProject-${buildConfig.projectName}`, {
             projectName: buildConfig.projectName,
             buildSpec: cb.BuildSpec
@@ -67,11 +62,26 @@ export class FullStackDeployPipeline extends cdk.Stack{
             cache: cb.Cache.local(cb.LocalCacheMode.DOCKER_LAYER)
         });
         project.role?.addManagedPolicy(ALL_THE_ACCESS);
-        return new cpActions.CodeBuildAction({
+        const buildAction = new cpActions.CodeBuildAction({
             actionName: `Deploy-${buildConfig.projectName}`,
             input: this.sourceCode,
             project: project,
+            outputs: [cfnArtifact]
         });
+        pipeline.addStage({
+            stageName: 'Build',
+            actions: [buildAction]
+        })
+        const deployAction = new cpActions.CloudFormationCreateUpdateStackAction({
+            actionName: `Deploy-${buildConfig.projectName}`,
+            stackName: `${buildConfig.projectName}-${this.pipelineStage}`,
+            templatePath: cfnArtifact.atPath(`${buildConfig.stackName}.template.json`),
+            adminPermissions: true
+        });
+        pipeline.addStage({
+            stageName: 'Deploy',
+            actions: [deployAction]
+        })
     }
 }
 
