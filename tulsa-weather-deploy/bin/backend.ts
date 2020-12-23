@@ -14,11 +14,11 @@ const deployPipeline = new FullStackDeployPipeline(app, 'TulsaWeatherAppDeployPi
     pipelineName: 'tulsa-weather-app-deploy-pipeline',
     sourceRepo: sourceControl.codeRepo.repo,
     appBuildConfig: {
-        projectName: 'tulsa-weather-app-build',
+        projectName: 'tulsa-weather-app',
         buildSpecPath: 'tulsa-weather-app/cdk/buildspec.yaml',
     },
     apiBuildConfig: {
-        projectName: 'tulsa-weather-api-build',
+        projectName: 'tulsa-weather-api',
         buildSpecPath: 'tulsa-weather-api/cdk/buildspec.yaml',
     }
 });
