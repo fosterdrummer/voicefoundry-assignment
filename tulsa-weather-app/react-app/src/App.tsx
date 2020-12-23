@@ -35,7 +35,17 @@ class App extends React.Component{
     }
     return (
       <div>
-        <h1>Today's Weather in {response}</h1>
+        <h2>Today's Weather in {response.name}</h2>
+        <div>
+          <h3>{response.weather[0].main}</h3>
+          <h3>Current Temp {response.main.temp}</h3>
+          <h4>Min</h4>
+          <p>{response.main.temp_min}</p>
+          <h4>Max</h4>
+          <p>{response.main.temp_max}</p>
+          <h3>Wind</h3>
+          <p>Windspeed is {response.wind.speed} mph with gusts at {response.wind.speed} mph</p>
+        </div>
       </div>
     );
   }
