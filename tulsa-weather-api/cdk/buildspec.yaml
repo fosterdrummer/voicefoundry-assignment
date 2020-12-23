@@ -17,7 +17,7 @@ phases:
       - cd ${CODEBUILD_SRC_DIR}/${HANDLER_SRC_DIR}
       - npm run build
       - cd ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}
-      - npm run cdk deploy -- --require-approval never
+      - npm run cdk synth -- --require-approval never
 artifacts:
   files:
   - ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}/cdk.out/TulsaWeatherApiDeployment.template.json

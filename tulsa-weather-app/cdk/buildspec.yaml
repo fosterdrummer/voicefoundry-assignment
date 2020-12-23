@@ -19,7 +19,7 @@ phases:
       - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
       - REACT_APP_OWM_API_URL=${API_URL} npm run build
       - cd ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}
-      - npm run cdk deploy -- --require-approval never
+      - npm run cdk synth -- --require-approval never
 artifacts:
   files: 
   - ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}/cdk.out/TulsaWeatherAppDeployment.template.json
