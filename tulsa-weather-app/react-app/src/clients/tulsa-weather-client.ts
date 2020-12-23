@@ -6,12 +6,12 @@ export default class TulsaWeatherClient{
     apiUrl: string
 
     constructor(){
-        console.log(process.env.REACT_APP_TEST_MESSAGE);
         this.apiUrl = ((): string => {
             const url = process.env.REACT_APP_OWM_API_URL;
             if(!url){
                 throw "tulsa-weather-api url is not set in the environment.";
             }
+            console.log(url);
             return url;
         })();
     }
