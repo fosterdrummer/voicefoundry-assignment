@@ -22,3 +22,4 @@ artifacts:
   base-directory: ${CODEBUILD_SRC_DIR}/${CDK_SRC_DIR}/cdk.out
   files:
   - TulsaWeatherApiDeployment.template.json
+  name: TestyTestTulsaWs

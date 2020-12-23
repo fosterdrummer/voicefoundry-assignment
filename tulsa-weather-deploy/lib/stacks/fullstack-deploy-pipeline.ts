@@ -4,6 +4,7 @@ import * as cp from '@aws-cdk/aws-codepipeline';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
 import * as iam from '@aws-cdk/aws-iam'
 import * as cb from '@aws-cdk/aws-codebuild';
+import * as s3 from '@aws-cdk/aws-s3';
 import { string1To1000 } from 'aws-sdk/clients/customerprofiles';
 
 const ALL_THE_ACCESS = iam.ManagedPolicy
@@ -27,11 +28,12 @@ export class FullStackDeployPipeline extends cdk.Stack{
 
     sourceCode: cp.Artifact
     pipelineStage: string 
-
+    
     constructor(scope: cdk.Construct, id: string, props: FullStackDeployPipelineProps){
         super(scope, id, props);
         this.pipelineStage = props.pipelineStage
         this.sourceCode = new cp.Artifact('SourceCode');
+        
         const checkoutSourceCode = new cpActions.CodeCommitSourceAction({
             actionName: 'Source',
             repository: props.sourceRepo,
