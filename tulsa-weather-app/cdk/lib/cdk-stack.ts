@@ -17,7 +17,7 @@ export class S3AppDeployment extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       websiteIndexDocument: props.appIndexFileName
     });
-
+    
     new s3Deploy.BucketDeployment(this, 'AppDeployment', {
       sources: [s3Deploy.Source.asset(props.buildPath)],
       retainOnDelete: false,

@@ -1,0 +1,20 @@
+version: 0.2
+env:
+  variables:
+    APP_SRC_DIR: tulsa-weather-api/handler
+phases:
+  install:
+    runtime_versions:
+      nodejs: 12
+    commands:
+     - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
+     - npm install
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
+      - npm run build
+artifacts:
+  base-directory: ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
+  files: 
+  - src/**
+  - node_modules/**
