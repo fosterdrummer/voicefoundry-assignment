@@ -2,6 +2,7 @@ import * as cdk from '@aws-cdk/core';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
 import * as cb from '@aws-cdk/aws-codebuild';
 import * as cp from '@aws-cdk/aws-codepipeline';
+import * as iam from '@aws-cdk/aws-iam';
 
 export type AppDeploymentBuildActionProps = {
     actionName: string
@@ -23,6 +24,7 @@ export function generateAppDeploymentBuildAction(scope: cdk.Construct, props: Ap
         environmentVariables: props.environmentVariables,
         cache: cb.Cache.local(cb.LocalCacheMode.DOCKER_LAYER)
     })
+    project.role?.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'))
     return new cpActions.CodeBuildAction({
         actionName: props.actionName,
         project: project,

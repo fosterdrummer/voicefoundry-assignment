@@ -33,7 +33,7 @@ export class DeployStack extends cdk.Stack{
                     runtime: Runtime.NODEJS_12_X,
                     handler: 'src/index.handler'
                 },
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml'),
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml'),
             }
         })
     }
