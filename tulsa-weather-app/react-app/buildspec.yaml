@@ -2,6 +2,8 @@ version: 0.2
 env:
   variables:
     APP_SRC_DIR: tulsa-weather-app/react-app
+  parameter-store:
+    API_URL_VALUE: "${API_URL}"
 phases:
   install:
     runtime_versions:
@@ -12,7 +14,7 @@ phases:
   build:
     commands:
       - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
-      - REACT_APP_OWM_API_URL=${API_URL} npm run build
+      - REACT_APP_OWM_API_URL=${API_URL_VALUE} npm run build
 artifacts:
   base-directory: ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}/build
   files: 
