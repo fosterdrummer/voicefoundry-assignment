@@ -18,7 +18,7 @@ export function generateAppDeploymentBuildAction(scope: cdk.Construct, props: Ap
         buildSpec: props.buildSpec,
         environment: {
             privileged: true,
-            buildImage: cb.LinuxBuildImage.STANDARD_2_0
+            buildImage: cb.LinuxBuildImage.STANDARD_4_0
         },
         environmentVariables: props.environmentVariables,
         cache: cb.Cache.local(cb.LocalCacheMode.DOCKER_LAYER)

@@ -7,27 +7,61 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as apiGw from '@aws-cdk/aws-apigateway';
 import * as iam from '@aws-cdk/aws-iam';
 import { ApiHandlerProps, LambdaApiStage } from './api';
-import { generateAppDeploymentBuildAction } from './app-deployment-build-action'
+import { generateAppDeploymentBuildAction } from './app-deployment-build-action';
 
-const getBuildAndReleaseArtifacts = function(){
+/*
+    Some helper types and methods to manage sourceCode and release artifacts
+*/
+type ProjectArtifacts = {codeSource?: cp.Artifact, release: cp.Artifact}
+
+type PipelineArtifacts = {
+    cdk: ProjectArtifacts, 
+    frontEnd: ProjectArtifacts, 
+    api: ProjectArtifacts
+}
+
+const getBuildAndReleaseArtifacts = function(sourceCheck: any): ProjectArtifacts{
     return {
-        source: new cp.Artifact(),
+        codeSource: sourceCheck && new cp.Artifact(),
         release: new cp.Artifact()
     }
 }
 
+/*
+    Props needed for frontend and api deployments
+*/
 type GenericDeploymentProps = {
-    useCdkSourceProvider: boolean
+    /*
+        Provides a source action to fetch an component's source code
+    */
     sourceProvider?(output: cp.Artifact): cpActions.Action
+    /*
+        A buildspec to be configured in the codebuild projects
+    */
     readonly sourceBuildSpec: cb.BuildSpec
 }
 
+/*
+    Props needed to deploy the frontend app to S3
+*/
 export interface FrontEndDeploymentProps extends GenericDeploymentProps{
-    onWebsiteBucketCreation?(bucket: s3.Bucket): void
+    /*
+        Exposes the website bucket after creation
+    */
+    webBucketCreationCallback?(bucket: s3.Bucket): void
+    /*
+        The entry point to the app hosted on an s3 bucket (ex. index.html)
+    */
     appIndex: string
 }
 
+/*
+    Props needed to deploy the lambda api gw project
+*/
 export interface ApiDeploymentProps extends GenericDeploymentProps{
+    /*
+        Exposes the handler and api after creation
+    */
     apiCreationCallback?(handler: lambda.Function, api: apiGw.LambdaRestApi): void
     /*
         Allow clients to configure all function settings EXCEPT the code source
@@ -35,29 +69,52 @@ export interface ApiDeploymentProps extends GenericDeploymentProps{
     handlerProps: ApiHandlerProps
 }
 
+/*
+    Props needed for the deployment
+*/
 export interface AppDeploymentProps extends cdk.ResourceProps{
+    /*
+        The stage name of this deployment (ex. dev, test, prod)
+    */
     readonly stageName: string
+    /*
+        Name of the app to be deployed
+    */
     readonly appName: string
-    readonly projectRoot?: string
-    cdkSourceProvider(output: cp.Artifact): cpActions.Action,
-    readonly frontEndProps: FrontEndDeploymentProps,
+    /*
+        Repo relative path to the current cdk project.
+        This context is necessary for the buildspec to synth the api stack
+        at the proper location.
+    */
+    readonly cdkProjectRoot?: string
+    /*
+        Provides a source action to retrieve the cdk project's source code
+    */
+    cdkSourceProvider(output: cp.Artifact): cpActions.Action
+    readonly frontEndProps: FrontEndDeploymentProps
     readonly apiProps: ApiDeploymentProps
 }
-
+/*
+    Executes a deployment consisting of a frontend app hosted on S3
+    and a lambda service proxied through api gateway
+*/
 export class AppDeployment extends cdk.Resource{
 
     public readonly pipeline: cp.Pipeline
-    readonly apiStackName: string
-    readonly projectRoot?: string
+    protected readonly apiStackName: string
+    protected readonly projectRoot?: string
 
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentProps){
         super(scope, id, props);
 
-        this.projectRoot = props.projectRoot
+        const nameWithContext = (name: string): string => 
+            `${props.appName.toLocaleLowerCase()}-${name}-${props.stageName}`
+
+        this.projectRoot = props.cdkProjectRoot
 
         const apiStage = new LambdaApiStage(this, 'LambdaApiStage', {
             stageName: props.stageName,
-            serviceName: props.appName,
+            serviceName: nameWithContext('web'),
             apiCreationCallback: props.apiProps.apiCreationCallback,
             handlerProps: props.apiProps.handlerProps
         });
@@ -71,36 +128,42 @@ export class AppDeployment extends cdk.Resource{
             websiteIndexDocument: props.frontEndProps.appIndex
         });
         
-        const artifacts = {
-            cdk: getBuildAndReleaseArtifacts(),
-            api: getBuildAndReleaseArtifacts(),
-            frontEnd: getBuildAndReleaseArtifacts()
+        const artifacts: PipelineArtifacts = {
+            cdk: getBuildAndReleaseArtifacts(true),
+            api: getBuildAndReleaseArtifacts(props.apiProps.sourceProvider),
+            frontEnd: getBuildAndReleaseArtifacts(props.apiProps.sourceProvider)
         }
 
-        const deployPipelineName = `${props.appName}-${props.stageName}-deploy-pipeline`;
+        artifacts.cdk.codeSource = artifacts.cdk.codeSource as cp.Artifact
         
+        const sourceActions = [props.cdkSourceProvider(artifacts.cdk.codeSource)];
+        props.apiProps.sourceProvider && 
+        sourceActions.push(props.apiProps.sourceProvider(artifacts.api.codeSource as cp.Artifact));    
+        props.frontEndProps.sourceProvider &&
+        sourceActions.push(props.frontEndProps.sourceProvider(artifacts.frontEnd.codeSource as cp.Artifact));
+
+        const deployPipelineName = nameWithContext('deploy-pipeline');
+
         this.pipeline = new cp.Pipeline(this, 'DeployPipeline', {
             pipelineName: deployPipelineName,
             stages: [{
                 stageName: 'Source',
-                actions: [
-                    props.cdkSourceProvider(artifacts.cdk.source)
-                ]
+                actions: sourceActions
             }, {
                 stageName: 'BuildApi',
                 actions: [
                     generateAppDeploymentBuildAction(this, {
                         actionName: 'BuildApiRelease',
-                        buildProjectName: `${props.appName}-api-source-build-${props.stageName}`,
+                        buildProjectName: nameWithContext('api-source-build'),
                         buildSpec: props.apiProps.sourceBuildSpec,
-                        input: artifacts.cdk.source,
+                        input: artifacts.api.codeSource || artifacts.cdk.codeSource,
                         outputs: [artifacts.api.release]
                     }),
                     generateAppDeploymentBuildAction(this, {
                         actionName: 'BuildApiCfn',
-                        buildProjectName: `${props.appName}-api-cfn-build-${props.stageName}`,
+                        buildProjectName: nameWithContext('api-cfn-build'),
                         buildSpec: this.getCdkBuildSpec(),
-                        input: artifacts.cdk.source,
+                        input: artifacts.cdk.codeSource,
                         outputs: [artifacts.cdk.release]
                     })
                 ]
@@ -109,23 +172,25 @@ export class AppDeployment extends cdk.Resource{
                 actions: [
                     new cpActions.CloudFormationCreateUpdateStackAction({
                         actionName: 'DeployCfnApiRelease',
-                        stackName: `${props.appName}-${props.stageName}-api`,
-                        templatePath: artifacts.cdk.release.atPath(`${apiStage.stackName}.template.json`),
+                        stackName: nameWithContext('api'),
+                        templatePath: artifacts.cdk.release
+                            .atPath(`${apiStage.stackName}.template.json`),
                         adminPermissions: true,
                         parameterOverrides: {
-                            ...apiStage.lambdaCodeFromParams.assign(artifacts.api.release)
-                        }
+                            ...apiStage.lambdaCodeFromParams.assign(artifacts.api.release.s3Location)
+                        },
+                        extraInputs: [artifacts.api.release]
                     }),
                     generateAppDeploymentBuildAction(this, {
                         actionName: 'BuildFrontEnd',
-                        buildProjectName: `${props.appName}-frontend-build-${props.stageName}`,
+                        buildProjectName: nameWithContext('frontend-build'),
                         buildSpec: props.frontEndProps.sourceBuildSpec,
                         environmentVariables: {
                             API_URL: {
                                 value: apiStage.apiUrlParameterName
                             }
                         },
-                        input: artifacts.cdk.source,
+                        input: artifacts.frontEnd.codeSource || artifacts.cdk.codeSource,
                         outputs: [artifacts.frontEnd.release]
                     })
                 ]
@@ -139,35 +204,34 @@ export class AppDeployment extends cdk.Resource{
                     })
                 ]
             }]
-        })
-        this.pipeline.role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'));
+        });
+        this.pipeline.role.addManagedPolicy(iam.ManagedPolicy
+                .fromAwsManagedPolicyName('AdministratorAccess'));
     }
 
     getCdkBuildSpec(): cb.BuildSpec {
         const installCommands = ['npm install']
         const buildCommands = [`npm run cdk synth -- ${this.apiStackName}`]
-        const switchDirCommnad = this.projectRoot && `cd ${this.projectRoot}`
+        const switchDirCommnad = this.projectRoot && 'cd ${CODEBUILD_SRC_DIR}/' + this.projectRoot
         if(switchDirCommnad){
-            installCommands.push(switchDirCommnad);
-            buildCommands.push(switchDirCommnad);
+            installCommands.unshift(switchDirCommnad);
+            buildCommands.unshift(switchDirCommnad);
         }
-        const artifactContext = this.projectRoot ? `${this.projectRoot}/`: ''
-        const artifactFile = `${artifactContext}${this.apiStackName}.template.json`
+        const artifactContext = this.projectRoot ? `/${this.projectRoot}/cdk.out`: '';
+        const baseDir = '${CODEBUILD_SRC_DIR}' + artifactContext;
+        const artifactFile = `${this.apiStackName}.template.json`;
         return cb.BuildSpec.fromObject({
             version: '0.2',
             phases: {
                 install: {
-                    runtime_versions: {
-                        nodejs: 12
-                    },
-                    commnads: installCommands
+                    runtime_versions: { nodejs: 12 },
+                    commands: installCommands
                 },
-                build: {
-                    commands: buildCommands
-                }
+                build: { commands: buildCommands }
             },
-            artifacts: {
-                files: [artifactFile]
+            artifacts: { 
+                'base-directory': baseDir,
+                files: [artifactFile] 
             }
         });
     }
