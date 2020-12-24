@@ -5,6 +5,7 @@ import * as cp from '@aws-cdk/aws-codepipeline';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as apiGw from '@aws-cdk/aws-apigateway';
+import * as iam from '@aws-cdk/aws-iam';
 import { ApiHandlerProps, LambdaApiStage } from './api';
 import { generateAppDeploymentBuildAction } from './app-deployment-build-action'
 
@@ -77,7 +78,7 @@ export class AppDeployment extends cdk.Resource{
         }
 
         const deployPipelineName = `${props.appName}-${props.stageName}-deploy-pipeline`;
-
+        
         this.pipeline = new cp.Pipeline(this, 'DeployPipeline', {
             pipelineName: deployPipelineName,
             stages: [{
@@ -104,7 +105,7 @@ export class AppDeployment extends cdk.Resource{
                     })
                 ]
             }, {
-                stageName: 'DeployApi',
+                stageName: 'DeployApiAndBuildFrontend',
                 actions: [
                     new cpActions.CloudFormationCreateUpdateStackAction({
                         actionName: 'DeployCfnApiRelease',
@@ -114,11 +115,7 @@ export class AppDeployment extends cdk.Resource{
                         parameterOverrides: {
                             ...apiStage.lambdaCodeFromParams.assign(artifacts.api.release)
                         }
-                    })
-                ]
-            }, {
-                stageName: 'BuildFrontend',
-                actions: [
+                    }),
                     generateAppDeploymentBuildAction(this, {
                         actionName: 'BuildFrontEnd',
                         buildProjectName: `${props.appName}-frontend-build-${props.stageName}`,
@@ -143,6 +140,7 @@ export class AppDeployment extends cdk.Resource{
                 ]
             }]
         })
+        this.pipeline.role.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'));
     }
 
     getCdkBuildSpec(): cb.BuildSpec {

@@ -26,7 +26,7 @@ export class DeployStack extends cdk.Stack{
             cdkSourceProvider: repoProvider,
             frontEndProps: {
                 appIndex: 'index.html',
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildSpec.yaml'),
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml'),
                 useCdkSourceProvider: true
             },
             apiProps: {
@@ -34,7 +34,7 @@ export class DeployStack extends cdk.Stack{
                     runtime: Runtime.NODEJS_12_X,
                     handler: 'src/index.handler'
                 },
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildSpec.yaml'),
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml'),
                 useCdkSourceProvider: true
             }
         })
