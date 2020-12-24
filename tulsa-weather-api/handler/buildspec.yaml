@@ -17,4 +17,4 @@ artifacts:
   base-directory: ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
   files:
   - src/**
-  - node_modules/**
+  - node_modules/**/*
