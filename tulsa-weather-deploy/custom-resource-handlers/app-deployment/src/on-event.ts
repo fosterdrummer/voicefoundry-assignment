@@ -11,11 +11,7 @@ import AWS from 'aws-sdk';
 AWS.config.region = process.env.REGION
 
 module.exports.handler = async (event: CloudFormationCustomResourceEvent): Promise<CloudFormationCustomResourceSuccessResponse> => {
-    const props = getAppDeploymentProps(event)
-    /*
-        The code pipeline will run automatically during a create so 
-        I will not need to handle anything during the initial event.
-    */
+    const props = getAppDeploymentProps(event);
     const codePipeline = new CodePipeline(props.codePipelineName);
     const pipelineExecutionId = await (async function(){
         if(event.RequestType === 'Update'){
