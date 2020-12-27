@@ -11,7 +11,7 @@ const sourceControl = new SourceControl(app, 'TulsaWeatherAppSourceControl', {
     repoName: 'tulsa-weather-app'
 });
 
-const deployStack = new DeployStack(app, 'DeployStack');
+const deployStack = new DeployStack(app, 'DeploymentStack');
 
 
 

@@ -67,6 +67,20 @@ export class CodePipeline{
                 }
             });
     }
+
+    async waitForExecutionToComplete(executionId: string, pollInterval = 10000) {
+        return new Promise((resolve => {
+            const waitComplete = setInterval(() => {
+                this.getExecutionResult(executionId)
+                    .then(result => {
+                        if(result !== ExecutionResult.IN_PROGRESS){
+                            clearInterval(waitComplete);
+                            resolve(result);
+                        }
+                    })
+            }, pollInterval)
+        }));
+    }
 }
 
 

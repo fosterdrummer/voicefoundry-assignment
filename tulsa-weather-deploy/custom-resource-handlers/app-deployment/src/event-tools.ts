@@ -5,15 +5,18 @@ import {
 export type AppDeploymentProps = {
     codePipelineName: string
     apiStackName: string
-    bucketUrl: string
-    bucketName: string
+    frontendBucketUrl: string
+    frontendBucketName: string
+    artifactBucketName: string
 }
 
 export function getAppDeploymentProps(event: any): AppDeploymentProps{
+    const resourceProps = event['ResourceProperties']
     return {
-        codePipelineName: event['ResourceProperties']['codePipelineName'],
-        bucketName: event['ResourceProperties']['bucketName'],
-        bucketUrl: event['ResourceProperties']['bucketUrl'],
-        apiStackName: event['ResourceProperties']['apiStackName']
+        codePipelineName: resourceProps['codePipelineName'],
+        frontendBucketName: resourceProps['frontendBucketName'],
+        artifactBucketName: resourceProps['artifactBucketName'],
+        frontendBucketUrl: resourceProps['frontendBucketUrl'],
+        apiStackName: resourceProps['apiStackName'],
     }
 }

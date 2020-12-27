@@ -1,5 +1,4 @@
 import AWS from 'aws-sdk';
-import { AnyARecord } from 'dns';
 
 export class Stack{
     name: string
@@ -8,11 +7,28 @@ export class Stack{
         this.name = stackName;
         this.client = new AWS.CloudFormation();
     }
-    async delete() {
+    
+    async isDeleted(): Promise<boolean> {
+        return this.describe()
+            .then(stack => stack === undefined)
+    }
+
+    async delete(deleteWaiterInterval = 10000) {
         this.client.deleteStack({
             StackName: this.name
+        });
+        await new Promise(resolve => {
+            const waitInterval = setInterval(() => {
+                this.describe().then(stack => {
+                    if(stack === undefined){
+                        clearInterval(waitInterval);
+                        resolve(true);
+                    }
+                });
+            }, deleteWaiterInterval);
         })
     }
+
     async describe(): Promise<AWS.CloudFormation.Stack | undefined> {
         return this.client.describeStacks({
             StackName: this.name
@@ -20,10 +36,5 @@ export class Stack{
             const stacks = data.Stacks
             return stacks ? stacks[0]: undefined
         });
-    }
-
-    async isDeleted(): Promise<boolean> {
-        return this.describe()
-            .then(stack => stack === undefined)
     }
 }

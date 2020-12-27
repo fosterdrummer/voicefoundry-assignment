@@ -1,6 +1,7 @@
 import * as cdk from '@aws-cdk/core';
 import * as cc from '@aws-cdk/aws-codecommit';
 import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
+import * as iam from '@aws-cdk/aws-iam';
 import {Artifact} from '@aws-cdk/aws-codepipeline';
 
 import { AppDeployment } from '../custom-resources/app-deployment/app-deployment';
@@ -11,16 +12,18 @@ export class DeployStack extends cdk.Stack{
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps){
         super(scope, id, props);
 
+        const repo = cc.Repository.fromRepositoryName(this, 'SrcRepo', 'tulsa-weather-app')
+
         const repoProvider = (artifact: Artifact): cpActions.Action => {
             return new cpActions.CodeCommitSourceAction({
                 actionName: 'CheckoutRepo',
-                repository: cc.Repository.fromRepositoryName(this, 'SrcRepo', 'tulsa-weather-app'),
+                repository: repo,
                 output: artifact
             })
         }
 
-        new AppDeployment(this, 'Prod', {
-            stageName: 'prod',
+        const prodDeployment = new AppDeployment(this, 'Prod', {
+            stageName: 'test',
             cdkProjectRoot: 'tulsa-weather-deploy',
             appName: 'tulsa-weather-app',
             cdkSourceProvider: repoProvider,
@@ -35,6 +38,13 @@ export class DeployStack extends cdk.Stack{
                 },
                 sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml'),
             }
-        })
+        });
+
+        prodDeployment.pipeline.addToRolePolicy(iam.PolicyStatement.fromJson({
+            "Sid": "AllPull",
+            "Effect": "Allow",
+            "Action": "codecommit:GitPull",
+            "Resource": repo.repositoryArn
+        }));
     }
 }

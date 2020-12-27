@@ -9,8 +9,8 @@ import * as iam from '@aws-cdk/aws-iam';
 import * as cr from '@aws-cdk/custom-resources';
 import { ApiHandlerProps, LambdaApiStage } from './api';
 import { generateAppDeploymentBuildAction } from './app-deployment-build-action';
-import * as path from 'path';
-
+const uuid = require('uuid');
+ 
 /*
     Some helper types and methods to manage sourceCode and release artifacts
 */
@@ -114,6 +114,10 @@ export class AppDeployment extends cdk.Resource{
 
         this.projectRoot = props.cdkProjectRoot
 
+        /*
+            This stack will not be created as part of the initial cdk deployment.
+            It will be deployed by the code pipeline instead.
+        */
         const apiStage = new LambdaApiStage(this, 'LambdaApiStage', {
             serviceName: nameWithContext('api'),
             apiCreationCallback: props.apiProps.apiCreationCallback,
@@ -145,8 +149,14 @@ export class AppDeployment extends cdk.Resource{
 
         const deployPipelineName = nameWithContext('deploy-pipeline');
 
+        const artifactBucket = new s3.Bucket(this, 'ArtifactBucket', {
+            bucketName: nameWithContext('artifact-bucket'),
+            removalPolicy: cdk.RemovalPolicy.DESTROY
+        });
+
         this.pipeline = new cp.Pipeline(this, 'DeployPipeline', {
             pipelineName: deployPipelineName,
+            artifactBucket: artifactBucket,
             stages: [{
                 stageName: 'Source',
                 actions: sourceActions
@@ -212,26 +222,6 @@ export class AppDeployment extends cdk.Resource{
         });
         this.pipeline.role.addManagedPolicy(iam.ManagedPolicy
                 .fromAwsManagedPolicyName('AdministratorAccess'));
-                
-        const standardLambdaConfig = {
-            code: lambda.Code.fromAsset('custom-resource-handlers/app-deployment'),
-            runtime: lambda.Runtime.NODEJS_10_X,
-            environment: {
-                REGION: this.env.region
-            }
-        }
-
-        const onEventHandler = new lambda.SingletonFunction(this, 'OnEventHandler', {
-            uuid: 'app-deployment-custom-resource-onevent-handler',
-            handler: 'build/on-event.handler',
-            ...standardLambdaConfig
-        });
-        
-        const isCompleteHandler = new lambda.SingletonFunction(this, 'IsCompleteHandler', {
-            uuid: 'app-deployment-custom-resource-iscomplete-handler',
-            handler: 'build/is-complete.handler',
-            ...standardLambdaConfig
-        });
 
         const allowPipelineAccess = iam.PolicyStatement.fromJson({
             "Sid": "allowPipelineAccess",
@@ -251,31 +241,42 @@ export class AppDeployment extends cdk.Resource{
                 "cloudformation:DeleteStack",
                 "cloudformation:DescribeStacks"
             ],
-            "Resource": `arn:aws:cloudformation:${this.env.region}:${this.env.account}:stack/${apiStage.stackName}/*`
-        })
+            "Resource": `arn:aws:cloudformation:${this.env.region}:${this.env.account}:stack/${nameWithContext('api')}/*`
+        });
 
-        onEventHandler.addToRolePolicy(allowPipelineAccess);
-        onEventHandler.addToRolePolicy(allowCfnAccess);
-        isCompleteHandler.addToRolePolicy(allowPipelineAccess);
-        isCompleteHandler.addToRolePolicy(allowCfnAccess);
-        frontEndStageBucket.grantDelete(onEventHandler);
-        frontEndStageBucket.grantRead(onEventHandler);
+        const onEventHandler = new lambda.SingletonFunction(this, 'OnEventHandler', {
+            uuid: 'app-deployment-custom-resource-onevent-handler',
+            handler: 'build/on-event.handler',
+            code: lambda.Code.fromAsset('custom-resource-handlers/app-deployment'),
+            runtime: lambda.Runtime.NODEJS_10_X,
+            environment: {
+                REGION: this.env.region
+            },
+            timeout: cdk.Duration.minutes(15)
+        });
+
+        [allowPipelineAccess, allowCfnAccess].forEach(statement =>
+            onEventHandler.addToRolePolicy(statement));
+
+        [frontEndStageBucket, artifactBucket].forEach(bucket => {
+            bucket.grantDelete(onEventHandler);
+            bucket.grantRead(onEventHandler);
+        });
         
         const provider = new cr.Provider(this, 'AppDeploymentCustomResourceProvider', {
-            onEventHandler: onEventHandler,
-            isCompleteHandler: isCompleteHandler
-        })
-        /*
+            onEventHandler: onEventHandler
+        });
+
         new cdk.CustomResource(this, 'AppDeploymentCustomResource', {
             serviceToken: provider.serviceToken,
             properties: {
                 codePipelineName: this.pipeline.pipelineName,
                 bucketName: frontEndStageBucket.bucketName,
                 bucketUrl: frontEndStageBucket.bucketWebsiteUrl,
-                apiStackName: apiStage.stackName
+                apiStackName: nameWithContext('api'),
+                uuid: uuid.v4() //Ensure a deployment is ran during every Update
             }
         });
-        */
     }
 
     getCdkBuildSpec(): cb.BuildSpec {

@@ -37,6 +37,7 @@
     "@aws-cdk/custom-resources": "^1.79.0",
     "aws-sdk": "^2.814.0",
     "simple-git": "^2.31.0",
-    "source-map-support": "^0.5.16"
+    "source-map-support": "^0.5.16",
+    "uuid": "^8.3.2"
   }
 }
