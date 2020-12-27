@@ -10,7 +10,6 @@ const HttpMethod = {
 export type ApiHandlerProps = Omit<Omit<lambda.FunctionProps, 'code'>,'functionName'>;
 
 export interface LambdaApiStageProps extends cdk.StackProps{
-    readonly stageName: string,
     readonly serviceName: string
     handlerProps: ApiHandlerProps
     apiCreationCallback?(handler: lambda.Function, api: apiGw.LambdaRestApi): void
@@ -23,16 +22,15 @@ export class LambdaApiStage extends cdk.Stack{
 
     constructor(scope: cdk.Construct, id: string, props: LambdaApiStageProps){
         super(scope, id, props);
-        const deploymentName = `${props.serviceName}-${props.stageName}`;
         this.lambdaCodeFromParams = lambda.Code.fromCfnParameters();
         const handler = new lambda.Function(this, 'Handler', {
             code: this.lambdaCodeFromParams,
-            functionName: `${deploymentName}--handler`,
+            functionName: `${props.serviceName}-handler`,
             ...props.handlerProps,
         });
         const api = new apiGw.LambdaRestApi(this, 'ServiceApi', {
             handler: handler,
-            restApiName: `${deploymentName}-api`,
+            restApiName: `${props.serviceName}-api`,
             proxy: false,
         });
         api.root.addMethod(HttpMethod.GET);
@@ -40,8 +38,8 @@ export class LambdaApiStage extends cdk.Stack{
         props.apiCreationCallback && 
         props.apiCreationCallback(handler, api);
 
-        this.apiUrlParameterName = `/${deploymentName}/ApiUrl`
-
+        this.apiUrlParameterName = `/${props.serviceName}/ApiUrl`
+        
         new ssm.StringParameter(this, 'ApiUrlParam', {
             parameterName: this.apiUrlParameterName,
             stringValue: api.url

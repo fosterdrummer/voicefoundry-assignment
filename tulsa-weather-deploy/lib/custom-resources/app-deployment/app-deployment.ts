@@ -6,8 +6,10 @@ import * as s3 from '@aws-cdk/aws-s3';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as apiGw from '@aws-cdk/aws-apigateway';
 import * as iam from '@aws-cdk/aws-iam';
+import * as cr from '@aws-cdk/custom-resources';
 import { ApiHandlerProps, LambdaApiStage } from './api';
 import { generateAppDeploymentBuildAction } from './app-deployment-build-action';
+import * as path from 'path';
 
 /*
     Some helper types and methods to manage sourceCode and release artifacts
@@ -113,8 +115,7 @@ export class AppDeployment extends cdk.Resource{
         this.projectRoot = props.cdkProjectRoot
 
         const apiStage = new LambdaApiStage(this, 'LambdaApiStage', {
-            stageName: props.stageName,
-            serviceName: nameWithContext('web'),
+            serviceName: nameWithContext('api'),
             apiCreationCallback: props.apiProps.apiCreationCallback,
             handlerProps: props.apiProps.handlerProps
         });
@@ -122,7 +123,7 @@ export class AppDeployment extends cdk.Resource{
         this.apiStackName = apiStage.stackName
 
         const frontEndStageBucket = new s3.Bucket(this, 'HostBucket', {
-            bucketName: props.appName.toLowerCase(),
+            bucketName: nameWithContext('web'),
             publicReadAccess: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             websiteIndexDocument: props.frontEndProps.appIndex
@@ -168,7 +169,7 @@ export class AppDeployment extends cdk.Resource{
                     })
                 ]
             }, {
-                stageName: 'DeployApiAndBuildFrontend',
+                stageName: 'DeployApi',
                 actions: [
                     new cpActions.CloudFormationCreateUpdateStackAction({
                         actionName: 'DeployCfnApiRelease',
@@ -180,7 +181,11 @@ export class AppDeployment extends cdk.Resource{
                             ...apiStage.lambdaCodeFromParams.assign(artifacts.api.release.s3Location)
                         },
                         extraInputs: [artifacts.api.release]
-                    }),
+                    })
+                ]
+            },{
+                stageName: 'BuildFrontend',
+                actions: [
                     generateAppDeploymentBuildAction(this, {
                         actionName: 'BuildFrontEnd',
                         buildProjectName: nameWithContext('frontend-build'),
@@ -193,7 +198,7 @@ export class AppDeployment extends cdk.Resource{
                         input: artifacts.frontEnd.codeSource || artifacts.cdk.codeSource,
                         outputs: [artifacts.frontEnd.release]
                     })
-                ]
+                ] 
             }, {
                 stageName: 'DeployFrontend',
                 actions: [
@@ -207,6 +212,70 @@ export class AppDeployment extends cdk.Resource{
         });
         this.pipeline.role.addManagedPolicy(iam.ManagedPolicy
                 .fromAwsManagedPolicyName('AdministratorAccess'));
+                
+        const standardLambdaConfig = {
+            code: lambda.Code.fromAsset('custom-resource-handlers/app-deployment'),
+            runtime: lambda.Runtime.NODEJS_10_X,
+            environment: {
+                REGION: this.env.region
+            }
+        }
+
+        const onEventHandler = new lambda.SingletonFunction(this, 'OnEventHandler', {
+            uuid: 'app-deployment-custom-resource-onevent-handler',
+            handler: 'build/on-event.handler',
+            ...standardLambdaConfig
+        });
+        
+        const isCompleteHandler = new lambda.SingletonFunction(this, 'IsCompleteHandler', {
+            uuid: 'app-deployment-custom-resource-iscomplete-handler',
+            handler: 'build/is-complete.handler',
+            ...standardLambdaConfig
+        });
+
+        const allowPipelineAccess = iam.PolicyStatement.fromJson({
+            "Sid": "allowPipelineAccess",
+            "Effect": "Allow",
+            "Action": [
+                "codepipeline:StartPipelineExecution",
+                "codepipeline:GetPipelineExecution",
+                "codepipeline:ListPipelineExecutions"
+            ],
+            "Resource": this.pipeline.pipelineArn
+        });
+
+        const allowCfnAccess = iam.PolicyStatement.fromJson({
+            "Sid": "allowCfnAccess",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:DeleteStack",
+                "cloudformation:DescribeStacks"
+            ],
+            "Resource": `arn:aws:cloudformation:${this.env.region}:${this.env.account}:stack/${apiStage.stackName}/*`
+        })
+
+        onEventHandler.addToRolePolicy(allowPipelineAccess);
+        onEventHandler.addToRolePolicy(allowCfnAccess);
+        isCompleteHandler.addToRolePolicy(allowPipelineAccess);
+        isCompleteHandler.addToRolePolicy(allowCfnAccess);
+        frontEndStageBucket.grantDelete(onEventHandler);
+        frontEndStageBucket.grantRead(onEventHandler);
+        
+        const provider = new cr.Provider(this, 'AppDeploymentCustomResourceProvider', {
+            onEventHandler: onEventHandler,
+            isCompleteHandler: isCompleteHandler
+        })
+        /*
+        new cdk.CustomResource(this, 'AppDeploymentCustomResource', {
+            serviceToken: provider.serviceToken,
+            properties: {
+                codePipelineName: this.pipeline.pipelineName,
+                bucketName: frontEndStageBucket.bucketName,
+                bucketUrl: frontEndStageBucket.bucketWebsiteUrl,
+                apiStackName: apiStage.stackName
+            }
+        });
+        */
     }
 
     getCdkBuildSpec(): cb.BuildSpec {
