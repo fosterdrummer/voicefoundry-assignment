@@ -4,8 +4,7 @@ import * as cb from '@aws-cdk/aws-codebuild';
 import * as cp from '@aws-cdk/aws-codepipeline';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as iam from '@aws-cdk/aws-iam';
-import { AppStackProps, ApiStack } from './api';
-import { FrontendStackProps, FrontendStack } from './frontend'
+import { AppStackProps, AppStack } from './app';
 import { GitHubSourceAction, GitHubSourceActionProps } from '@aws-cdk/aws-codepipeline-actions';
 import { cdkBuildSpec } from './cdk-buildspec';
 
@@ -15,8 +14,7 @@ type BuildProps = {
 }
 
 export interface AppDeploymentPipelineProps extends cdk.ResourceProps{
-    appProps: AppStackProps & FrontendStackProps;
-    
+    appProps: AppStackProps;
     appEnv: string;
     githubSourceProps: Omit<GitHubSourceActionProps, 'actionName' | 'output'>;
     cdkSubDirectory: string;
@@ -38,15 +36,18 @@ export class AppDeploymentPipeline extends cdk.Resource{
         /**
          * The stack that will be deployed using the pipeline below
          */
-        const appStack = new ApiStack(this, 'AppStack', {
-            ...props.appProps,
-            appName: this.appFullName
-        });
-
-        const frontendStack = new FrontendStack(this, 'FrontendStack', {
+        const appStack = new AppStack(this, 'AppStack', {
             ...props.appProps,
             appName: this.appFullName
         })
+
+        const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+            bucketName: `${this.appFullName}-web`,
+            publicReadAccess: true,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            websiteIndexDocument: props.appProps.indexDocument,
+            websiteErrorDocument: props.appProps.errorDocument
+        });
 
         /**
          * The environment below will allow code build jobs to access relevant
@@ -60,17 +61,9 @@ export class AppDeploymentPipeline extends cdk.Resource{
 
         const environmentWithBucketUrlParameterName = {
             BUCKET_URL_PARAM_NAME: {
-                value: 'test'
+                value: frontendBucket.bucketWebsiteUrl
             }
         }
-
-        const allowParameterStoreAccess = new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [
-                'ssm:GetParameters'
-            ],
-            resources: [`arn:aws:ssm:${this.env.region}:${this.env.account}:*`]
-        });
 
         /**
          * Create a custom artifact bucket so we can clean it up later
@@ -110,7 +103,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 this.getBuildAction({
                     actionName: 'BuildApiRelease',
                     buildProjectName: 'build-api-source',
-                    buildSpec: props.apiBuildProps.sourceBuildSpec,
+                    buildSpec: props.frontendBuildProps.sourceBuildSpec,
                     input: sourceCode,
                     outputs: [apiRelease]
                 }),
@@ -120,10 +113,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                     buildSpec: cdkBuildSpec({
                         cdkProjectRoot: props.cdkSubDirectory,
                         deployCommands: ['npm run cdk synth'],
-                        stackArtifacts: [
-                            appStack.stackName,
-                            frontendStack.stackName
-                        ]
+                        stackArtifacts: [appStack.stackName]
                     }),
                     input: sourceCode,
                     outputs: [cloudAssembly]
@@ -131,11 +121,12 @@ export class AppDeploymentPipeline extends cdk.Resource{
             ]
         });
 
+
         /**
-         * Deploy and test the api
+         * Deploy the app resources and test the api
          */
-        const deployApiAction = new cpActions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DeployApiStack',
+        const deployCdkAppAction = new cpActions.CloudFormationCreateUpdateStackAction({
+            actionName: 'DeployCdkApp',
             stackName: appStack.appName,
             templatePath: cloudAssembly.atPath(`${appStack.stackName}.template.json`),
             adminPermissions: true,
@@ -146,13 +137,13 @@ export class AppDeploymentPipeline extends cdk.Resource{
         });
 
         const apiDeployStage = this.pipeline.addStage({ stageName: 'DeployApi' });
-        apiDeployStage.addAction(deployApiAction);
+        apiDeployStage.addAction(deployCdkAppAction);
 
         /**
          * The deployApiAction attaches a restricted role to the api stack.
          * We need to add more access to this role in order to delete the stack later
          */
-        deployApiAction.deploymentRole.addManagedPolicy(iam.ManagedPolicy
+        deployCdkAppAction.deploymentRole.addManagedPolicy(iam.ManagedPolicy
             .fromAwsManagedPolicyName('AdministratorAccess'))
 
         if(props.apiBuildProps.integrationTestSpec){
@@ -162,8 +153,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 buildSpec: props.apiBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
-                environmentVariables: environmentWithApiUrlParameterName,
-                accessPolicyStatement: allowParameterStoreAccess
+                environmentVariables: environmentWithApiUrlParameterName
             }));
         }
 
@@ -179,31 +169,21 @@ export class AppDeploymentPipeline extends cdk.Resource{
                     buildSpec: props.frontendBuildProps.sourceBuildSpec,
                     input: sourceCode,
                     outputs: [frontendRelease],
-                    environmentVariables: environmentWithApiUrlParameterName,
-                    accessPolicyStatement: allowParameterStoreAccess
+                    environmentVariables: environmentWithApiUrlParameterName
                 })
             ] 
         });
 
-        /**
-         * Deploy and test the api
-         */
-        const deployFrontendAction = new cpActions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DeployFrontendStack',
-            stackName: frontendStack.appName,
-            templatePath: cloudAssembly.atPath(`${frontendStack.stackName}.template.json`),
-            adminPermissions: true,
-            parameterOverrides: {
-                ...frontendStack.frontEndDeploymentParams.assign(frontendRelease.s3Location)
-            },
-            extraInputs: [frontendRelease]
+        const frontendDeployStage = this.pipeline.addStage({
+            stageName: 'DeployFrontend',
+            actions: [
+                new cpActions.S3DeployAction({
+                    actionName: 'DeployToS3',
+                    bucket: frontendBucket,
+                    input: frontendRelease
+                })
+            ]
         });
-
-        const frontendDeployStage = this.pipeline.addStage({ stageName: 'DeployFrontend' });
-        frontendDeployStage.addAction(deployFrontendAction);
-
-        deployFrontendAction.deploymentRole.addManagedPolicy(iam.ManagedPolicy
-            .fromAwsManagedPolicyName('AdministratorAccess'))
 
         if(props.apiBuildProps.integrationTestSpec){
             frontendDeployStage.addAction(this.getBuildAction({
@@ -212,8 +192,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 buildSpec: props.apiBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
-                environmentVariables: environmentWithBucketUrlParameterName,
-                accessPolicyStatement: allowParameterStoreAccess
+                environmentVariables: environmentWithBucketUrlParameterName
             }));
         }
     }

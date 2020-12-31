@@ -4,7 +4,6 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as cr from '@aws-cdk/custom-resources';
 import * as cp from '@aws-cdk/aws-codepipeline';
 import * as iam from '@aws-cdk/aws-iam';
-import { AppStack } from './app';
 import { Pipeline } from '@aws-cdk/aws-codepipeline';
 import { Bucket } from '@aws-cdk/aws-s3';
 const uuid = require('uuid');

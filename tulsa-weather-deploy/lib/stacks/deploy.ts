@@ -30,10 +30,10 @@ export class DeployStack extends cdk.Stack{
             cdkSubDirectory: 'tulsa-weather-deploy',
             appEnv: 'test',
             frontendBuildProps: {
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml')
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml')
             },
             apiBuildProps: {
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml')
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml')
             }
         });
 
