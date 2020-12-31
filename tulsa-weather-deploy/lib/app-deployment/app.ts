@@ -21,32 +21,12 @@ export class AppStack extends cdk.Stack{
     lambdaCodeFromParams: lambda.CfnParametersCode;
     apiUrlParameterName: string;
     bucketUrlParameterName: string;
-    frontendBucket: Bucket
     appName: string;
 
     constructor(scope: cdk.Construct, id: string, props: AppStackProps){
         super(scope, id, props);
-        
         this.appName = props.appName;
         this.generateApiResources(props);
-        this.generateFrontendResources(props);
-    }
-
-    generateFrontendResources(props: AppStackProps){
-        this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-            bucketName: `${props.appName}-web`,
-            publicReadAccess: true,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            websiteIndexDocument: props.indexDocument,
-            websiteErrorDocument: props.errorDocument
-        });
-
-        this.bucketUrlParameterName = `/${props.appName}/BucketUrl`
-
-        new ssm.StringParameter(this, 'BucketUrlParam', {
-            parameterName: this.bucketUrlParameterName,
-            stringValue: this.frontendBucket.bucketWebsiteUrl
-        });
     }
 
     generateApiResources(props: AppStackProps){

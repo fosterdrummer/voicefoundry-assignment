@@ -13,7 +13,7 @@ type BuildProps = {
     integrationTestSpec?: cb.BuildSpec
 }
 
-export interface AppDeploymentPipelineProps extends cdk.StackProps{
+export interface AppDeploymentPipelineProps extends cdk.ResourceProps{
     appProps: AppStackProps;
     appEnv: string;
     githubSourceProps: Omit<GitHubSourceActionProps, 'actionName' | 'output'>;
@@ -23,35 +23,46 @@ export interface AppDeploymentPipelineProps extends cdk.StackProps{
     
 }
 
-export class AppDeploymentPipeline extends cdk.Stack{
+export class AppDeploymentPipeline extends cdk.Resource{
 
     public readonly pipeline: cp.Pipeline
-    protected readonly appStack: AppStack
     private appFullName: string
 
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps){
-        super(scope, id, props);
+        super(scope, id);
 
         this.appFullName = `${props.appProps.appName}-${props.appEnv}`
 
         /**
          * The stack that will be deployed using the pipeline below
          */
-        this.appStack = new AppStack(this, 'AppStack', {
+        const appStack = new AppStack(this, 'AppStack', {
             ...props.appProps,
             appName: this.appFullName
         })
+
+        const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+            bucketName: `${this.appFullName}-web`,
+            publicReadAccess: true,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            websiteIndexDocument: props.appProps.indexDocument,
+            websiteErrorDocument: props.appProps.errorDocument
+        });
 
         /**
          * The environment below will allow code build jobs to access relevant
          * bucket and api urls through parameter store
          */
         const environmentWithApiUrlParameterName = {
-            API_URL_PARAM_NAME: this.appStack.apiUrlParameterName
+            API_URL_PARAM_NAME: {
+                value: appStack.apiUrlParameterName
+            }
         }
 
         const environmentWithBucketUrlParameterName = {
-            BUCKET_URL_PARAM_NAME: this.appStack.bucketUrlParameterName
+            BUCKET_URL_PARAM_NAME: {
+                value: frontendBucket.bucketWebsiteUrl
+            }
         }
 
         /**
@@ -102,7 +113,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
                     buildSpec: cdkBuildSpec({
                         cdkProjectRoot: props.cdkSubDirectory,
                         deployCommands: ['npm run cdk synth'],
-                        stackArtifacts: [this.appStack.stackName]
+                        stackArtifacts: [appStack.stackName]
                     }),
                     input: sourceCode,
                     outputs: [cloudAssembly]
@@ -116,11 +127,11 @@ export class AppDeploymentPipeline extends cdk.Stack{
          */
         const deployCdkAppAction = new cpActions.CloudFormationCreateUpdateStackAction({
             actionName: 'DeployCdkApp',
-            stackName: this.appStack.appName,
-            templatePath: cloudAssembly.atPath(`${this.appStack.stackName}.template.json`),
+            stackName: appStack.appName,
+            templatePath: cloudAssembly.atPath(`${appStack.stackName}.template.json`),
             adminPermissions: true,
             parameterOverrides: {
-                ...this.appStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
+                ...appStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
             },
             extraInputs: [apiRelease]
         });
@@ -168,7 +179,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
             actions: [
                 new cpActions.S3DeployAction({
                     actionName: 'DeployToS3',
-                    bucket: this.appStack.frontendBucket,
+                    bucket: frontendBucket,
                     input: frontendRelease
                 })
             ]
