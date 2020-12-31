@@ -4,7 +4,7 @@ import * as cb from '@aws-cdk/aws-codebuild';
 import * as cp from '@aws-cdk/aws-codepipeline';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as iam from '@aws-cdk/aws-iam';
-import { AppStackProps, AppStack } from './app';
+import { ApiStackProps, ApiStack } from './api';
 import { GitHubSourceAction, GitHubSourceActionProps } from '@aws-cdk/aws-codepipeline-actions';
 import { cdkBuildSpec } from './cdk-buildspec';
 
@@ -13,55 +13,77 @@ type BuildProps = {
     integrationTestSpec?: cb.BuildSpec
 }
 
-export interface AppDeploymentPipelineProps extends cdk.ResourceProps{
-    appProps: AppStackProps;
+type FrontendBucketProps = {
+    indexDocument: string,
+    errorDocument?: string
+}
+
+export type AppDeploymentPipelineProps = {
+    appName: string;
     appEnv: string;
+    apiStackProps: Omit<ApiStackProps, 'apiName'>;
+    frontendBucketProps: FrontendBucketProps;
     githubSourceProps: Omit<GitHubSourceActionProps, 'actionName' | 'output'>;
     cdkSubDirectory: string;
     frontendBuildProps: BuildProps;
     apiBuildProps: BuildProps;
-    
 }
 
-export class AppDeploymentPipeline extends cdk.Resource{
+export class AppDeploymentPipeline extends cdk.Stack{
 
     public readonly pipeline: cp.Pipeline
+    public readonly apiStack: ApiStack
+    public readonly frontendBucket: s3.Bucket
     private appFullName: string
 
-    constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps){
-        super(scope, id);
+    constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps & cdk.StackProps){
+        super(scope, id, props);
 
-        this.appFullName = `${props.appProps.appName}-${props.appEnv}`
+        const {
+            appName,
+            appEnv,
+            apiStackProps,
+            frontendBucketProps,
+            githubSourceProps,
+            cdkSubDirectory,
+            frontendBuildProps,
+            apiBuildProps
+        } = props;
+
+        this.appFullName = `${appName}-${appEnv}`
 
         /**
          * The stack that will be deployed using the pipeline below
          */
-        const appStack = new AppStack(this, 'AppStack', {
-            ...props.appProps,
-            appName: this.appFullName
+        this.apiStack = new ApiStack(this, 'AppStack', {
+            ...apiStackProps,
+            apiName: this.appFullName
         })
 
-        const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+        this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
             bucketName: `${this.appFullName}-web`,
             publicReadAccess: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
-            websiteIndexDocument: props.appProps.indexDocument,
-            websiteErrorDocument: props.appProps.errorDocument
+            websiteIndexDocument: frontendBucketProps.indexDocument,
+            websiteErrorDocument: frontendBucketProps.errorDocument
         });
 
         /**
-         * The environment below will allow code build jobs to access relevant
-         * bucket and api urls through parameter store
+         * Used by the frontend build job to access the api
+         * url through parameter store
          */
         const environmentWithApiUrlParameterName = {
             API_URL_PARAM_NAME: {
-                value: appStack.apiUrlParameterName
+                value: this.apiStack.apiUrlParameterName
             }
         }
 
-        const environmentWithBucketUrlParameterName = {
-            BUCKET_URL_PARAM_NAME: {
-                value: frontendBucket.bucketWebsiteUrl
+        /**
+         * Used by the frontend test job
+         */
+        const environmentWithBucketUrl = {
+            BUCKET_URL: {
+                value: this.frontendBucket.bucketWebsiteUrl
             }
         }
 
@@ -87,7 +109,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 actions: [
                     new GitHubSourceAction({
                         actionName: 'CheckoutSource',
-                        ...props.githubSourceProps,
+                        ...githubSourceProps,
                         output: sourceCode
                     })
                 ]
@@ -103,7 +125,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 this.getBuildAction({
                     actionName: 'BuildApiRelease',
                     buildProjectName: 'build-api-source',
-                    buildSpec: props.frontendBuildProps.sourceBuildSpec,
+                    buildSpec: frontendBuildProps.sourceBuildSpec,
                     input: sourceCode,
                     outputs: [apiRelease]
                 }),
@@ -111,9 +133,9 @@ export class AppDeploymentPipeline extends cdk.Resource{
                     actionName: 'BuildCloudAssembly',
                     buildProjectName: 'build-cloud-assembly',
                     buildSpec: cdkBuildSpec({
-                        cdkProjectRoot: props.cdkSubDirectory,
+                        cdkProjectRoot: cdkSubDirectory,
                         deployCommands: ['npm run cdk synth'],
-                        stackArtifacts: [appStack.stackName]
+                        stackArtifacts: [this.apiStack.stackName]
                     }),
                     input: sourceCode,
                     outputs: [cloudAssembly]
@@ -127,11 +149,11 @@ export class AppDeploymentPipeline extends cdk.Resource{
          */
         const deployCdkAppAction = new cpActions.CloudFormationCreateUpdateStackAction({
             actionName: 'DeployCdkApp',
-            stackName: appStack.appName,
-            templatePath: cloudAssembly.atPath(`${appStack.stackName}.template.json`),
+            stackName: this.apiStack.stackName,
+            templatePath: cloudAssembly.atPath(`${this.apiStack.stackName}.template.json`),
             adminPermissions: true,
             parameterOverrides: {
-                ...appStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
+                ...this.apiStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
             },
             extraInputs: [apiRelease]
         });
@@ -146,11 +168,11 @@ export class AppDeploymentPipeline extends cdk.Resource{
         deployCdkAppAction.deploymentRole.addManagedPolicy(iam.ManagedPolicy
             .fromAwsManagedPolicyName('AdministratorAccess'))
 
-        if(props.apiBuildProps.integrationTestSpec){
+        if(apiBuildProps.integrationTestSpec){
             apiDeployStage.addAction(this.getBuildAction({
                 actionName: 'TestApi',
                 buildProjectName: 'test-api',
-                buildSpec: props.apiBuildProps.integrationTestSpec,
+                buildSpec: apiBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
                 environmentVariables: environmentWithApiUrlParameterName
@@ -166,7 +188,7 @@ export class AppDeploymentPipeline extends cdk.Resource{
                 this.getBuildAction({
                     actionName: 'BuildFrontEnd',
                     buildProjectName: 'build-frontend',
-                    buildSpec: props.frontendBuildProps.sourceBuildSpec,
+                    buildSpec: frontendBuildProps.sourceBuildSpec,
                     input: sourceCode,
                     outputs: [frontendRelease],
                     environmentVariables: environmentWithApiUrlParameterName
@@ -179,20 +201,20 @@ export class AppDeploymentPipeline extends cdk.Resource{
             actions: [
                 new cpActions.S3DeployAction({
                     actionName: 'DeployToS3',
-                    bucket: frontendBucket,
+                    bucket: this.frontendBucket,
                     input: frontendRelease
                 })
             ]
         });
 
-        if(props.apiBuildProps.integrationTestSpec){
+        if(apiBuildProps.integrationTestSpec){
             frontendDeployStage.addAction(this.getBuildAction({
                 actionName: 'TestFrontend',
                 buildProjectName: 'test-frontend',
-                buildSpec: props.apiBuildProps.integrationTestSpec,
+                buildSpec: apiBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
-                environmentVariables: environmentWithBucketUrlParameterName
+                environmentVariables: environmentWithBucketUrl
             }));
         }
     }

@@ -3,7 +3,7 @@ import { BuildSpec } from "@aws-cdk/aws-codebuild";
 export type CdkBuildSpecProps = {
     cdkProjectRoot?: string;
     deployCommands: string[];
-    stackArtifacts: string[];
+    stackArtifacts?: string[];
 }
 
 export function cdkBuildSpec(props: CdkBuildSpecProps){
@@ -13,7 +13,7 @@ export function cdkBuildSpec(props: CdkBuildSpecProps){
     }
     const artifactDir = `${projectRoot}/cdk.out`;
     const switchToRoot = `cd ${projectRoot}`;
-    return BuildSpec.fromObject({
+    const buildSpecObject: any = {
         version: '0.2',
         phases: {
             install: {
@@ -26,11 +26,16 @@ export function cdkBuildSpec(props: CdkBuildSpecProps){
                     ...props.deployCommands
                 ] 
             }
-        },
-        artifacts: { 
+        }
+    };
+
+    if(props.stackArtifacts){
+        buildSpecObject.artifacts = { 
             'base-directory': artifactDir,
             files: props.stackArtifacts.map(name => 
                 `${name}.template.json`) 
         }
-    });
+    }
+
+    return BuildSpec.fromObject(buildSpecObject);
 }

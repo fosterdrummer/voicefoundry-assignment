@@ -8,4 +8,6 @@ import { DeployStack } from '../lib/stacks/deploy';
 
 const app = new cdk.App();
 
-new DeployStack(app, 'DeployStack');
+const deployStack = new DeployStack(app, 'DeployStack');
+
+console.log(deployStack.toJsonString(deployStack));

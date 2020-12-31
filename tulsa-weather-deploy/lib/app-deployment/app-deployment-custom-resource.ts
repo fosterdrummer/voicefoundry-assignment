@@ -1,36 +1,19 @@
 import * as cdk from '@aws-cdk/core';
-import * as s3 from '@aws-cdk/aws-s3';
 import * as lambda from '@aws-cdk/aws-lambda';
-import * as cr from '@aws-cdk/custom-resources';
-import * as cp from '@aws-cdk/aws-codepipeline';
 import * as iam from '@aws-cdk/aws-iam';
-import { Pipeline } from '@aws-cdk/aws-codepipeline';
-import { Bucket } from '@aws-cdk/aws-s3';
+import * as cr from '@aws-cdk/custom-resources';
 const uuid = require('uuid');
 
 const HANDLER_NAME_PREFIX = 'app-deployment';
 const HANDLER_SOURCE_PATH = 'custom-resource-handlers/app-deployment';
 
-export interface IFullStackDeployment{
-    pipeline: Pipeline,
-    artifactBucket: Bucket,
-    frontendBucket: Bucket
-    appStack: cdk.Stack
-}
-
-export interface AppDeploymentProps extends cdk.ResourceProps{
-    deployment: IFullStackDeployment
-}
 
 export class AppDeployment extends cdk.Resource{
 
-    constructor(scope: cdk.Construct, id: string, props: AppDeploymentProps){
-        super(scope, id, props);
-        
-        const deployment = props.deployment
-        
+    constructor(scope: cdk.Construct, id: string){
+        super(scope, id);        
 
-
+        /*
         const accessPolicy = new iam.ManagedPolicy(this, 'LambdaProviderPolicy', {
             managedPolicyName: `${HANDLER_NAME_PREFIX}-access`,
             statements: [{
@@ -95,14 +78,13 @@ export class AppDeployment extends cdk.Resource{
             serviceToken: provider.serviceToken,
             resourceType: 'Custom::AppDeployment',
             properties: {
-                /*
                 codePipelineName: props.pipeline.pipelineName,
                 frontendBucketName: props.frontendHostBucket.bucketName,
                 frontendBucketUrl: props.frontendHostBucket.bucketWebsiteUrl,
                 artifactBucketName: props.artifactBucket.bucketName,
-                apiStackName: apiStackDeploymentName,*/
+                apiStackName: apiStackDeploymentName,
                 uuid: uuid.v4() //Ensure a deployment is ran during every Update
             }
-        });
+        }); */
     }
 }
