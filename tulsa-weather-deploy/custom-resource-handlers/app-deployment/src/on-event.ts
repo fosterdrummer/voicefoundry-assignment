@@ -1,17 +1,16 @@
 import {
-    CloudFormationCustomResourceEvent,
-    CloudFormationCustomResourceSuccessResponse
+    CloudFormationCustomResourceEvent
 } from 'aws-lambda';
 import { getAppDeploymentProps } from './event-tools'
-import { CodePipeline, ExecutionResult } from './clients/code-pipeline';
+import { CodePipeline } from './clients/code-pipeline';
 import { Stack } from './clients/cfn';
 import { Bucket } from './clients/s3';
 import AWS from 'aws-sdk';
 
 AWS.config.region = process.env.REGION
 
-module.exports.handler = async (event: CloudFormationCustomResourceEvent): Promise<CloudFormationCustomResourceSuccessResponse> => {
-    
+module.exports.handler = async (event: CloudFormationCustomResourceEvent) => {
+        
     const requestType = event.RequestType
 
     const props = getAppDeploymentProps(event);
@@ -32,13 +31,6 @@ module.exports.handler = async (event: CloudFormationCustomResourceEvent): Promi
         throw `No valid ${codePipeline.name} execution id was found during ${event.RequestType}.`
     }
 
-    if(pipelineExecutionId !== ''){
-        const pipelineResult = await codePipeline.waitForExecutionToComplete(pipelineExecutionId);
-        if(pipelineResult !== ExecutionResult.SUCCESS){
-            throw `${props.codePipelineName} exection '${pipelineExecutionId}' finished in an invalid state: ${pipelineResult}`;
-        }
-    }
-
     if(requestType === 'Delete'){
         await Promise.all([
             new Bucket(props.frontendBucketName).deleteAllObjects(),
@@ -46,18 +38,10 @@ module.exports.handler = async (event: CloudFormationCustomResourceEvent): Promi
             new Stack(props.apiStackName).delete()
         ]);
     }
-    /*
-        Return our successful result. Failures will be returned through thrown
-        execeptions before this point.
-    */
+
     return {
-        RequestId: event.RequestId,
-        StackId: event.StackId,
-        LogicalResourceId: event.LogicalResourceId,
-        Status: 'SUCCESS',
         PhysicalResourceId: props.frontendBucketName,
-        Data: {
-            frontendBucketUrl: props.frontendBucketUrl,
-        }
+        PipelineExecutionId: pipelineExecutionId,
+        FrontendBucketUrl: props.frontendBucketUrl
     };
 }

@@ -10,14 +10,17 @@ export enum ExecutionResult{
 }
 
 export class CodePipeline{
+    
     client: AWS.CodePipeline
     name: string
+
     constructor(pipelineName: string){
         this.client = new AWS.CodePipeline()
         this.name = pipelineName
     }
 
     async start(): Promise<string|undefined> {
+        console.log(`Starting new pipeline execution in ${this.name}`);
         return this.client.startPipelineExecution({
             name: this.name
         }).promise()
@@ -28,13 +31,13 @@ export class CodePipeline{
         return this.client.listPipelineExecutions({
             pipelineName: this.name
         }).promise()
-            .then(data => data.pipelineExecutionSummaries)
-            .then(summaries => {
-                if(!summaries){
-                    throw 'Error: no valid exection summaries where found in the code pipeline: ' + this.name
-                }
-                return summaries[0].pipelineExecutionId;
-            });
+        .then(data => data.pipelineExecutionSummaries)
+        .then(summaries => {
+            if(!summaries){
+                throw 'Error: no valid exection summaries where found in the code pipeline: ' + this.name
+            }
+            return summaries[0].pipelineExecutionId;
+        });
     }
 
     async getExecutionSummary(executionId: string){
@@ -47,39 +50,12 @@ export class CodePipeline{
 
     async getExecutionResult(executionId: string){
         return this.getExecutionSummary(executionId)
-            .then(execution => {
-                if(!execution){
-                    throw `Could not find a valid ${this.name} pipeline execution using exection id: ${executionId}`
-                }
-                switch(execution.status){
-                    case ExecutionResult.FAILED:
-                        return ExecutionResult.FAILED
-                    case ExecutionResult.IN_PROGRESS:
-                        return ExecutionResult.IN_PROGRESS
-                    case ExecutionResult.STOPPED:
-                        return ExecutionResult.STOPPED
-                    case ExecutionResult.STOPPING:
-                        return ExecutionResult.STOPPING
-                    case ExecutionResult.SUCCESS:
-                        return ExecutionResult.SUCCESS
-                    case ExecutionResult.SUSPENDED:
-                        return ExecutionResult.SUSPENDED
-                }
-            });
-    }
-
-    async waitForExecutionToComplete(executionId: string, pollInterval = 10000) {
-        return new Promise((resolve => {
-            const waitComplete = setInterval(() => {
-                this.getExecutionResult(executionId)
-                    .then(result => {
-                        if(result !== ExecutionResult.IN_PROGRESS){
-                            clearInterval(waitComplete);
-                            resolve(result);
-                        }
-                    })
-            }, pollInterval)
-        }));
+        .then(execution => {
+            if(!execution){
+                throw `Could not find a valid ${this.name} pipeline execution using exection id: ${executionId}`
+            }
+            return execution.status as ExecutionResult
+        });
     }
 }
 
