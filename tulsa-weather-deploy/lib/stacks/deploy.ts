@@ -13,7 +13,7 @@ export class DeployStack extends cdk.Stack{
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',
-                oauthToken: cdk.SecretValue.secretsManager('GithubToken'),
+                oauthToken: cdk.SecretValue.secretsManager('GithubPrivateToken'),
                 branch: 'develop'
             },
             apiStackProps: {
