@@ -16,7 +16,7 @@ export class DeployStack extends cdk.Stack{
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',
-                oauthToken: new cdk.SecretValue('c80f825f1cf4cdb0d63137919e5531a279f1f5d3'),
+                oauthToken: new cdk.SecretValue('6db82d43063bd3c338acc674cb545545317689d1'),
                 branch: 'develop'
             },
             appProps: {
@@ -30,10 +30,10 @@ export class DeployStack extends cdk.Stack{
             cdkSubDirectory: 'tulsa-weather-deploy',
             appEnv: 'test',
             frontendBuildProps: {
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml')
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml')
             },
             apiBuildProps: {
-                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-app/react-app/buildspec.yaml')
+                sourceBuildSpec: BuildSpec.fromSourceFilename('tulsa-weather-api/handler/buildspec.yaml')
             }
         });
 
