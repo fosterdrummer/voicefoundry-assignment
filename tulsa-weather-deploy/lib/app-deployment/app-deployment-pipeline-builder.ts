@@ -24,7 +24,7 @@ export class AppDeploymentPipelineBuilder extends cdk.Construct{
             buildSpec: cdkBuildSpec({
                 cdkProjectRoot: props.cdkSubDirectory,
                 deployCommands: [
-                    `npm run cdk deploy ${this.pipeline.stackName}`
+                    `npm run cdk deploy ${this.pipeline.stackName} -- --require-approval never`
                 ]
             }),
             environment: {
