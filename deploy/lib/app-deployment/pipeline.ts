@@ -147,7 +147,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
                 this.getBuildAction({
                     actionName: 'BuildApiRelease',
                     buildProjectName: 'build-api-source',
-                    buildSpec: frontendBuildProps.sourceBuildSpec,
+                    buildSpec: apiBuildProps.sourceBuildSpec,
                     input: sourceCode,
                     outputs: [apiRelease]
                 }),
