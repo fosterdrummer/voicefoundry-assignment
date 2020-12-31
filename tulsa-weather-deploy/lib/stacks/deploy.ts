@@ -1,4 +1,9 @@
 import * as cdk from '@aws-cdk/core';
+import * as cc from '@aws-cdk/aws-codecommit';
+import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
+import * as iam from '@aws-cdk/aws-iam';
+import {Artifact} from '@aws-cdk/aws-codepipeline';
+
 import { AppDeploymentPipeline } from '../app-deployment/app-deployment-pipeline';
 import { BuildSpec } from '@aws-cdk/aws-codebuild';
 import { Runtime } from '@aws-cdk/aws-lambda';
