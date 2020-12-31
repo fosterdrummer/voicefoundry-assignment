@@ -17,7 +17,10 @@ export class AppDeploymentCustomResource extends cdk.Resource{
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentCustomResourceProps){
         super(scope, id);        
 
-        const pipelineStack = props.pipelineBuilder.pipelineStack;
+        const {
+            pipelineStack,
+            pipelineBuildProject
+        } = props.pipelineBuilder;
 
         const {
             frontendBucketName,
@@ -105,12 +108,15 @@ export class AppDeploymentCustomResource extends cdk.Resource{
             queryInterval: cdk.Duration.seconds(10)
         });
 
+        console.log(pipelineName);
+
         new cdk.CustomResource(this, 'AppDeploymentCustomResource', {
             serviceToken: provider.serviceToken,
             resourceType: 'Custom::AppDeployment',
             properties: {
                 codePipelineName: pipelineName,
                 pipelineStackName: pipelineStack.stackName,
+                pipelineBuilderName: pipelineBuildProject.projectName,
                 frontendBucketName: frontendBucketName,
                 artifactBucketName: artifactBucketName,
                 apiStackName: apiStackName,
