@@ -2,46 +2,59 @@ import {
     CloudFormationCustomResourceEvent
 } from 'aws-lambda';
 import { getAppDeploymentProps } from './event-tools'
-import { CodePipeline } from './clients/code-pipeline';
-import { Stack } from './clients/cfn';
-import { Bucket } from './clients/s3';
 import AWS from 'aws-sdk';
 
 AWS.config.region = process.env.REGION
 
+/**
+ * This handler will have the following responsbilities on a given Cloudformation
+ * Event:
+ * CREATE/UPDATE: 
+ * - Build the deployment pipeline using the pipeline builder
+ * - Start the deployment pipeline once it is built
+ * DELETE:
+ * - Delete objects in the frontend and artifact bucket
+ * - Delete the api and pipeline stacks
+ */
 module.exports.handler = async (event: CloudFormationCustomResourceEvent) => {
         
     const requestType = event.RequestType
 
-    const props = getAppDeploymentProps(event);
-    const codePipeline = new CodePipeline(props.codePipelineName);
+    const {
+        pipelineBuilder,
+        artifactBucket,
+        frontendBucket,
+        apiStack,
+        pipelineStack,
+        codePipeline
+    } = getAppDeploymentProps(event);
 
-    const pipelineExecutionId = await (async function(){        
-        switch(requestType){
-            case 'Create':
-                return codePipeline.getCurrentExecutionId();
-            case 'Update':
-                return codePipeline.start();
-            case 'Delete':
-                return '';
+    const pipelineExectionId = await (async function(){        
+        if(requestType == 'Delete'){
+            return '';
         }
+        console.log('Starting pipeline builder.')
+        await pipelineBuilder.startAndWait();
+        console.log('Start the code pipeline.');
+        return codePipeline.start();
     })();
 
-    if(pipelineExecutionId === undefined){
-        throw `No valid ${codePipeline.name} execution id was found during ${event.RequestType}.`
+    if(pipelineExectionId === undefined){
+        throw `Failed to retrieve current buildId for code build project ${pipelineBuilder.name}`;
     }
 
     if(requestType === 'Delete'){
+        console.log('Deleting bucket objects and apiStack.')
         await Promise.all([
-            new Bucket(props.frontendBucketName).deleteAllObjects(),
-            new Bucket(props.artifactBucketName).deleteAllObjects(),
-            new Stack(props.apiStackName).delete()
+            frontendBucket.deleteAllObjects(),
+            artifactBucket.deleteAllObjects(),
         ]);
+        await apiStack.deleteAndWait();
+        await pipelineStack.deleteAndWait();
     }
 
     return {
-        PhysicalResourceId: props.frontendBucketName,
-        PipelineExecutionId: pipelineExecutionId,
-        FrontendBucketUrl: props.frontendBucketUrl
+        PhysicalResourceId: frontendBucket.name,
+        PipelineExecutionId: pipelineExectionId,
     };
 }

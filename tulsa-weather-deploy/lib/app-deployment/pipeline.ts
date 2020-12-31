@@ -31,9 +31,10 @@ export type AppDeploymentPipelineProps = {
 
 export class AppDeploymentPipeline extends cdk.Stack{
 
-    public readonly pipeline: cp.Pipeline
-    public readonly apiStack: ApiStack
-    public readonly frontendBucket: s3.Bucket
+    public readonly pipelineName: string
+    public readonly apiStackName: string
+    public readonly frontendBucketName: string
+    public readonly artifactBucketName: string
     private appFullName: string
 
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps & cdk.StackProps){
@@ -51,22 +52,27 @@ export class AppDeploymentPipeline extends cdk.Stack{
         } = props;
 
         this.appFullName = `${appName}-${appEnv}`
-
+        this.pipelineName = this.appFullName + '-deploy-pipeline';
+        this.frontendBucketName = this.appFullName + '-web';
+        this.artifactBucketName = this.appFullName + '-artifacts';
         /**
-         * The stack that will be deployed using the pipeline below
+         * The api gw stack that will be deployed using the pipeline below
          */
-        this.apiStack = new ApiStack(this, 'AppStack', {
+        const apiStack = new ApiStack(this, 'AppStack', {
             ...apiStackProps,
             apiName: this.appFullName
         })
 
-        this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
-            bucketName: `${this.appFullName}-web`,
+        this.apiStackName = apiStack.stackName;
+    
+        const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+            bucketName: this.frontendBucketName,
             publicReadAccess: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             websiteIndexDocument: frontendBucketProps.indexDocument,
             websiteErrorDocument: frontendBucketProps.errorDocument
         });
+
 
         /**
          * Used by the frontend build job to access the api
@@ -74,7 +80,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
          */
         const environmentWithApiUrlParameterName = {
             API_URL_PARAM_NAME: {
-                value: this.apiStack.apiUrlParameterName
+                value: apiStack.apiUrlParameterName
             }
         }
 
@@ -83,7 +89,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
          */
         const environmentWithBucketUrl = {
             BUCKET_URL: {
-                value: this.frontendBucket.bucketWebsiteUrl
+                value: frontendBucket.bucketWebsiteUrl
             }
         }
 
@@ -91,7 +97,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
          * Create a custom artifact bucket so we can clean it up later
          */
         const artifactBucket = new s3.Bucket(this, 'ArtifactBucket', {
-            bucketName: `${this.appFullName}-artifact-bucket`,
+            bucketName: this.artifactBucketName,
             removalPolicy: cdk.RemovalPolicy.DESTROY
         });
         
@@ -100,8 +106,8 @@ export class AppDeploymentPipeline extends cdk.Stack{
         const frontendRelease = new cp.Artifact();
         const apiRelease = new cp.Artifact();
 
-        this.pipeline = new cp.Pipeline(this, 'DeployPipeline', {
-            pipelineName: `${this.appFullName}-deploy-pipeline`,
+        const pipeline = new cp.Pipeline(this, 'DeployPipeline', {
+            pipelineName: this.pipelineName,
             restartExecutionOnUpdate: false,
             artifactBucket: artifactBucket,
             stages: [{
@@ -119,7 +125,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
         /**
          * Compile the api source code and cloud assembly
          */
-        this.pipeline.addStage({
+        pipeline.addStage({
             stageName: 'BuildApiAndCloudAssembly',
             actions: [
                 this.getBuildAction({
@@ -135,7 +141,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
                     buildSpec: cdkBuildSpec({
                         cdkProjectRoot: cdkSubDirectory,
                         deployCommands: ['npm run cdk synth'],
-                        stackArtifacts: [this.apiStack.stackName]
+                        stackArtifacts: [apiStack.stackName]
                     }),
                     input: sourceCode,
                     outputs: [cloudAssembly]
@@ -149,16 +155,16 @@ export class AppDeploymentPipeline extends cdk.Stack{
          */
         const deployCdkAppAction = new cpActions.CloudFormationCreateUpdateStackAction({
             actionName: 'DeployCdkApp',
-            stackName: this.apiStack.stackName,
-            templatePath: cloudAssembly.atPath(`${this.apiStack.stackName}.template.json`),
+            stackName: apiStack.stackName,
+            templatePath: cloudAssembly.atPath(`${apiStack.stackName}.template.json`),
             adminPermissions: true,
             parameterOverrides: {
-                ...this.apiStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
+                ...apiStack.lambdaCodeFromParams.assign(apiRelease.s3Location)
             },
             extraInputs: [apiRelease]
         });
 
-        const apiDeployStage = this.pipeline.addStage({ stageName: 'DeployApi' });
+        const apiDeployStage = pipeline.addStage({ stageName: 'DeployApi' });
         apiDeployStage.addAction(deployCdkAppAction);
 
         /**
@@ -182,7 +188,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
         /**
          * Build, deploy, and test the frontend app
          */
-        this.pipeline.addStage({
+        pipeline.addStage({
             stageName: 'BuildFrontend',
             actions: [
                 this.getBuildAction({
@@ -196,12 +202,12 @@ export class AppDeploymentPipeline extends cdk.Stack{
             ] 
         });
 
-        const frontendDeployStage = this.pipeline.addStage({
+        const frontendDeployStage = pipeline.addStage({
             stageName: 'DeployFrontend',
             actions: [
                 new cpActions.S3DeployAction({
                     actionName: 'DeployToS3',
-                    bucket: this.frontendBucket,
+                    bucket: frontendBucket,
                     input: frontendRelease
                 })
             ]

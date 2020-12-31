@@ -3,13 +3,13 @@ import * as sm from '@aws-cdk/aws-secretsmanager';
 
 import { BuildSpec } from '@aws-cdk/aws-codebuild';
 import { Runtime } from '@aws-cdk/aws-lambda';
-import { AppDeploymentPipelineBuilder } from '../app-deployment/app-deployment-pipeline-builder';
+import { AppDeployment } from '../app-deployment/app-deployment';
 
 export class DeployStack extends cdk.Stack{
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps){
         super(scope, id, props);
 
-        new AppDeploymentPipelineBuilder(this, 'TestDeployment', {
+        new AppDeployment(this, 'TestDeployment', {
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',

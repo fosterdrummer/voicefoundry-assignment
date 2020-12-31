@@ -17,17 +17,14 @@ export class Stack{
         }).promise()
     }
 
-    async describe(){
-        return this.client.describeStacks({
+    async waitStackDeleteComplete(){
+        return this.client.waitFor('stackDeleteComplete', {
             StackName: this.name
-        }).promise()
-        .then(data => 
-            data.Stacks && data.Stacks[0]);
+        }).promise();
     }
 
-    async isDeleted(){
-        return this.describe()
-            .then(_ => true)
-            .catch(_ => false);
+    async deleteAndWait(){
+        await this.delete();
+        return this.waitStackDeleteComplete();
     }
 }

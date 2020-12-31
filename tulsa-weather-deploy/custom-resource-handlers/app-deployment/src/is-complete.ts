@@ -1,24 +1,27 @@
 import { getAppDeploymentProps } from './event-tools';
-import { CodePipeline, ExecutionResult } from './clients/code-pipeline';
-import { Stack } from './clients/cfn';
+import { ExecutionResult } from './clients/code-pipeline';
+import AWS from 'aws-sdk';
+
+AWS.config.region = process.env.REGION;
 
 module.exports.handler = async (event: any) => {
-    const props = getAppDeploymentProps(event);
+    
+    const codePipeline = getAppDeploymentProps(event).codePipeline;
+    
     const pipelineExecutionId = event['PipelineExecutionId'];
-    
-    const codePipelineResult = await new CodePipeline(props.codePipelineName)
-        .getExecutionResult(pipelineExecutionId);
-    
-    var isComplete = false;
+
+    var isComplete = true;
     var data: {[name: string]: string} | undefined;
-    if(event.RequestType === 'Delete'){
-        isComplete = await new Stack(props.apiStackName).isDeleted();
-    } else if(codePipelineResult === ExecutionResult.SUCCESS){
-        isComplete = true
-        data = { frontendBucketUrl: props.frontendBucketUrl }
-    } else if(codePipelineResult !== ExecutionResult.IN_PROGRESS){
-        throw `Error: the ${props.codePipelineName} exection ${pipelineExecutionId} finished in an invalid state: ${codePipelineResult}`
+    
+    if(event.RequestType !== 'Delete'){
+        const result = await codePipeline.getExecutionResult(pipelineExecutionId);
+        if(result === ExecutionResult.IN_PROGRESS){
+            isComplete = false;
+        } else if(result !== ExecutionResult.SUCCESS){
+            throw `The code pipeilne ${codePipeline.name} finished in an invalid state: ${result}`;
+        }
     }
+
     return {
         IsComplete: isComplete,
         Data: data

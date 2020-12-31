@@ -2,18 +2,44 @@ import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as iam from '@aws-cdk/aws-iam';
 import * as cr from '@aws-cdk/custom-resources';
+import { AppDeploymentPipelineBuilder } from './pipeline-builder';
 const uuid = require('uuid');
 
 const HANDLER_NAME_PREFIX = 'app-deployment';
 const HANDLER_SOURCE_PATH = 'custom-resource-handlers/app-deployment';
 
+export interface AppDeploymentCustomResourceProps extends cdk.ResourceProps{
+    pipelineBuilder: AppDeploymentPipelineBuilder
+}
 
-export class AppDeployment extends cdk.Resource{
+export class AppDeploymentCustomResource extends cdk.Resource{
 
-    constructor(scope: cdk.Construct, id: string){
+    constructor(scope: cdk.Construct, id: string, props: AppDeploymentCustomResourceProps){
         super(scope, id);        
 
-        /*
+        const pipelineStack = props.pipelineBuilder.pipelineStack;
+
+        const {
+            frontendBucketName,
+            artifactBucketName,
+            apiStackName,
+            pipelineName
+        } = pipelineStack;
+
+        const getRegionalArnPrefix = (serviceName: string) =>
+            `arn:aws:${serviceName}:${this.env.region}:${this.env.account}:`
+
+        const getGlobalArnPrefix = (serviceName: string) =>
+            `arn:aws:${serviceName}:::`
+
+        const getBucketIamArns = (bucketName: string) => {
+            const bucketArn = getGlobalArnPrefix('s3') + `bucket/${bucketName}`;
+            return [bucketArn, bucketArn + '/*'];
+        }
+
+        const getStackIamArn = (stackName: string) => 
+            getRegionalArnPrefix('cloudformation') + `:stack/${stackName}/*`;
+
         const accessPolicy = new iam.ManagedPolicy(this, 'LambdaProviderPolicy', {
             managedPolicyName: `${HANDLER_NAME_PREFIX}-access`,
             statements: [{
@@ -23,7 +49,8 @@ export class AppDeployment extends cdk.Resource{
                     "cloudformation:DescribeStacks"
                 ],
                 resources: [
-                    `arn:aws:cloudformation:${this.env.region}:${this.env.account}:stack/${deployment.appStack.stackName}/*`
+                    getStackIamArn(apiStackName),
+                    getStackIamArn(pipelineStack.stackName)
                 ]
             }, {
                 actions: [
@@ -32,7 +59,7 @@ export class AppDeployment extends cdk.Resource{
                     "codepipeline:ListPipelineExecutions"
                 ],
                 resources: [
-                    deployment.pipeline.pipelineArn
+                    getRegionalArnPrefix('codepipeline') + `:pipeline/${pipelineName}`
                 ]
             }, {
                 actions: [
@@ -41,17 +68,20 @@ export class AppDeployment extends cdk.Resource{
                     "s3:DeleteObject"
                 ],
                 resources: [
-                    deployment.frontendBucket.bucketArn,
-                    deployment.frontendBucket.bucketArn + '/*',
-                    deployment.artifactBucket.bucketArn,
-                    deployment.artifactBucket.bucketArn + '/*',
+                    ...getBucketIamArns(frontendBucketName),
+                    ...getBucketIamArns(artifactBucketName)
                 ]
+            }, {
+                actions: [
+                    "codebuild:StartBuild",
+                    "codebuild:BatchGetBuilds"
+                ],
+                resources: [props.pipelineBuilder.pipelineBuildProject.projectArn]
             }].map(actionsAndResources => new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
                 ...actionsAndResources
             }))
         });
-        
         
         const getAppDeploymentHandler = (name: string) => {
             const lambdaFunction = new lambda.SingletonFunction(this, `CustomResourceHandler-${name}`, {
@@ -61,7 +91,8 @@ export class AppDeployment extends cdk.Resource{
                 runtime: lambda.Runtime.NODEJS_10_X,
                 environment: {
                     REGION: this.env.region
-                }
+                },
+                timeout: cdk.Duration.minutes(15)
             });
             lambdaFunction.role?.addManagedPolicy(accessPolicy);
             return lambdaFunction;
@@ -78,13 +109,13 @@ export class AppDeployment extends cdk.Resource{
             serviceToken: provider.serviceToken,
             resourceType: 'Custom::AppDeployment',
             properties: {
-                codePipelineName: props.pipeline.pipelineName,
-                frontendBucketName: props.frontendHostBucket.bucketName,
-                frontendBucketUrl: props.frontendHostBucket.bucketWebsiteUrl,
-                artifactBucketName: props.artifactBucket.bucketName,
-                apiStackName: apiStackDeploymentName,
+                codePipelineName: pipelineName,
+                pipelineStackName: pipelineStack.stackName,
+                frontendBucketName: frontendBucketName,
+                artifactBucketName: artifactBucketName,
+                apiStackName: apiStackName,
                 uuid: uuid.v4() //Ensure a deployment is ran during every Update
             }
-        }); */
+        });
     }
 }
