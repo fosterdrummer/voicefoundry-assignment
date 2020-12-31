@@ -1,10 +1,6 @@
 import * as cdk from '@aws-cdk/core';
-import * as cc from '@aws-cdk/aws-codecommit';
-import * as cpActions from '@aws-cdk/aws-codepipeline-actions';
-import * as iam from '@aws-cdk/aws-iam';
-import {Artifact} from '@aws-cdk/aws-codepipeline';
+import * as sm from '@aws-cdk/aws-secretsmanager';
 
-import { AppDeploymentPipeline } from '../app-deployment/app-deployment-pipeline';
 import { BuildSpec } from '@aws-cdk/aws-codebuild';
 import { Runtime } from '@aws-cdk/aws-lambda';
 import { AppDeploymentPipelineBuilder } from '../app-deployment/app-deployment-pipeline-builder';
@@ -17,7 +13,7 @@ export class DeployStack extends cdk.Stack{
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',
-                oauthToken: new cdk.SecretValue('0d41769fc3905938e959b0a5394ca58a762b887f'),
+                oauthToken: cdk.SecretValue.secretsManager('GithubToken'),
                 branch: 'develop'
             },
             apiStackProps: {
