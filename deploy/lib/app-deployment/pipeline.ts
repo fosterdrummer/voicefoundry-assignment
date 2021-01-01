@@ -227,7 +227,8 @@ export class AppDeploymentPipeline extends cdk.Stack{
                 buildSpec: apiBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
-                environmentVariables: environmentWithApiUrlParameterName
+                environmentVariables: environmentWithApiUrlParameterName,
+                accessPolicyStatement: ssmReadAccess
             }));
         }
 
@@ -260,11 +261,11 @@ export class AppDeploymentPipeline extends cdk.Stack{
             ]
         });
 
-        if(apiBuildProps.integrationTestSpec){
+        if(frontendBuildProps.integrationTestSpec){
             frontendDeployStage.addAction(this.getBuildAction({
                 actionName: 'TestFrontend',
                 buildProjectName: 'test-frontend',
-                buildSpec: apiBuildProps.integrationTestSpec,
+                buildSpec: frontendBuildProps.integrationTestSpec,
                 input: sourceCode,
                 runOrder: 2,
                 environmentVariables: environmentWithBucketUrl
