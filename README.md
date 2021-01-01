@@ -10,7 +10,7 @@ You will need an AWS account setup prior to running the demo.
 This account should have a user configured with Admin access.
 
 #### AWS Profiles
-This project requires an aws profile in ~.aws/config to retrieve environment config and credentials. Pass the profile name to any scripts that require aws credentials.
+This project requires an aws profile in ~.aws/config to retrieve environment config and credentials. Pass the profile name to scripts that require aws credentials.
 
 ### Secrets
 
@@ -44,7 +44,7 @@ Use the following command to get things setup:
 ### Deploy
 Will everything setup on your local machine, it's time to deploy to AWS!
 
-Run the following commands to get the part started
+Run the following commands to get the party started
 ```shell
     cd deploy
     cdk deploy TulsaWeatherApp --profile <Your AWS Profile>
@@ -55,11 +55,11 @@ The TulsaWeatherApp stack uses an AppDeployment custom resource to:
 - Execute the pipeline (For Create and Update events)
 - Wait for the pipeline to complete successfully
 
-The stack will fail if the TulsaWeatherApp code pipeline does not complete successfully.
+The stack deployment will fail if the TulsaWeatherApp code pipeline does not complete successfully.
 
 ### Clean up
 Run the following command in the 'deploy' project to clean up the app resources: 
 ```shell
     cdk destroy TulsaWeatherApp
 ```
-You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
+*** NOTE: ***You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
