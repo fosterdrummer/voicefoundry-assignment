@@ -1,6 +1,3 @@
-import {
-    CloudFormationCustomResourceEvent
-} from 'aws-lambda';
 import { getAppDeploymentProps } from './event-tools'
 import AWS from 'aws-sdk';
 
@@ -17,7 +14,7 @@ AWS.config.region = process.env.REGION
  * - Delete objects in the frontend and artifact bucket
  * - Delete the api and pipeline stacks
  */
-module.exports.handler = async (event: CloudFormationCustomResourceEvent) => {
+module.exports.handler = async (event: any) => {
         
     const requestType = event.RequestType
 
@@ -31,18 +28,41 @@ module.exports.handler = async (event: CloudFormationCustomResourceEvent) => {
     } = getAppDeploymentProps(event);
 
     if(requestType !== 'Delete'){
+
+        /**
+         * We will need to delete the bucket contents if different
+         * AppDeployment Config is present during an update.
+         */
+        if(requestType === 'Update'){
+            const oldFrontendBucketName = event['OldResourceProperties']['frontendBucketName']
+            if(frontendBucket.name !== oldFrontendBucketName){
+                console.log('Deleting old bucket contents');
+                await frontendBucket.deleteAllObjects();
+                await artifactBucket.deleteAllObjects();
+            }
+        }
+
         console.log('Starting pipeline builder');
         await pipelineBuilder.startAndWait();
+        
         var pipelineExecutionId: string | undefined;
+        
+        /**
+         * The pipeline starts itself during a create event, so
+         * we will just get the current execution id during Create
+         */
         if(requestType === 'Create'){
             pipelineExecutionId = await codePipeline.getCurrentExecutionId();
         } else {
             pipelineExecutionId = await codePipeline.start();
         }
+        
         if(!pipelineExecutionId){
             throw 'No valid execution id found.';
         }
+        
         console.log('Starting deployment pipeline');
+        
         await codePipeline.waitForExecutionToComplete(pipelineExecutionId);
     } else {
         console.log('Deleting bucket objects and apiStack.')
