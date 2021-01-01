@@ -1,32 +1,32 @@
 # Hunter's VoiceFoundry Assignment
 
-# What do I need before getting started?
-## node.js
+## What do I need before getting started?
+### node.js
 You will need to have node.js installed on your machine before starting the demo. 
 node.js v10.15.3 or later should work
 
-## AWS
+### AWS
 You will need an AWS account setup prior to running the demo.
 This account should have a user configured with Admin access.
 
-### AWS Profiles
+#### AWS Profiles
 This project requires an aws profile in ~.aws/config to retrieve environment config and credentials. Pass the profile name to any scripts that require aws credentials.
 
-# Secrets
+### Secrets
 
 Secrets will be stored in AWS Secrets Manager after being passed to the 'doDemo' script described in the next section.
 
 You should have the following secrets in hand before starting the demo.
 
-## Github Private Key
+#### Github Private Key
 A github private key will be provided with the assignment submission. 
-## OpenWeatherMap Api Key
+#### OpenWeatherMap Api Key
 You will need to setup an OpenWeatherMap api key before starting the demo. [Click here](https://openweathermap.org/appid) for more information regarding signup and key retrieval.
 
 
-# How do I run this thing?
+## How do I run this thing?
 
-## Setup
+### Setup
 I have provided a setup script in the root of this project.
 
 The script will do the following:
@@ -41,7 +41,7 @@ Use the following command to get things setup:
     ./setup.sh <Your aws profile name> <OpenWeatherMapApiKey> <Github Private Token>
 ```
 
-## Deploy
+### Deploy
 Will everything setup on your local machine, it's time to deploy to AWS!
 
 Run the following commands to get the part started
@@ -57,7 +57,7 @@ The TulsaWeatherApp stack uses an AppDeployment custom resource to:
 
 The stack will fail if the TulsaWeatherApp code pipeline does not complete successfully.
 
-# Clean up
+### Clean up
 Run the following command in the 'deploy' project to clean up the app resources: 
 ```shell
     cdk destroy TulsaWeatherApp
