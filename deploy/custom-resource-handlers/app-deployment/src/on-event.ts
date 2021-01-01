@@ -83,7 +83,7 @@ module.exports.handler = async (event: any) => {
     }
 
     return {
-        PhysicalResourceId: frontendBucket.name,
+        PhysicalResourceId: pipelineStack.name,
         Data: {
             frontendUrl: frontendBucket.getWebUrl()
         }
