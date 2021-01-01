@@ -1,5 +1,7 @@
-import { getAppDeploymentProps } from './event-tools';
-import { Bucket } from './clients/s3';
+import { 
+    getNewAppDeploymentProps,
+    getOldAppDeploymentProps,
+} from './event-tools';
 import AWS from 'aws-sdk';
 
 AWS.config.region = process.env.REGION
@@ -11,10 +13,12 @@ AWS.config.region = process.env.REGION
  * - Build the deployment pipeline using the pipeline builder
  * UPDATE:
  * - Start the deployment pipeline once it is built
+ * - Delete old bucket contents if bucket names have changed
  * DELETE:
  * - Delete objects in the frontend and artifact bucket
  * - Delete the api and pipeline stacks
  */
+
 module.exports.handler = async (event: any) => {
         
     const requestType = event.RequestType
@@ -26,21 +30,22 @@ module.exports.handler = async (event: any) => {
         apiStack,
         pipelineStack,
         codePipeline
-    } = getAppDeploymentProps(event);
+    } = getNewAppDeploymentProps(event);;
 
     if(requestType !== 'Delete'){
 
         /**
-         * We will need to delete the bucket contents if different
-         * AppDeployment Config is present during an update.
+         * The old buckets will be deleted if the new bucket names don't
+         * match the old ones during an update. So we will need to delete all objects
+         * in the old buckets before they are removed during the pipeline update.
          */
         if(requestType === 'Update'){
-            const oldFrontendBucketName = event['OldResourceProperties']['frontendBucketName'];
-            const oldArtifactBucketName = event['OldResourceProperties']['artifactBucketName'];
-            if(frontendBucket.name !== oldFrontendBucketName){
-                console.log('Deleting old bucket contents');
-                await new Bucket(oldFrontendBucketName).deleteAllObjects();
-                await new Bucket(oldArtifactBucketName).deleteAllObjects();
+            const oldProps = getOldAppDeploymentProps(event);
+            if(frontendBucket.name !== oldProps.frontendBucket.name){
+                await Promise.all([
+                    oldProps.frontendBucket.deleteAllObjects(),
+                    oldProps.artifactBucket.deleteAllObjects(),
+                ]);
             }
         }
 
@@ -66,7 +71,7 @@ module.exports.handler = async (event: any) => {
         console.log('Waiting for deployment pipeline to complete');
         await codePipeline.waitForExecutionToComplete(pipelineExecutionId);
     } else {
-        console.log('Deleting bucket objects and apiStack.')
+        console.log('Deleting bucket objects, api stack, and pipeline stack.')
         await Promise.all([
             frontendBucket.deleteAllObjects(),
             artifactBucket.deleteAllObjects(),

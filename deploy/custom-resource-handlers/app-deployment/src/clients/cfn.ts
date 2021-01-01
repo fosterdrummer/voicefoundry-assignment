@@ -24,6 +24,7 @@ export class Stack{
     }
 
     async deleteAndWait(){
+        console.log(`Deleting stack ${this.name}`);
         await this.delete();
         return this.waitStackDeleteComplete();
     }

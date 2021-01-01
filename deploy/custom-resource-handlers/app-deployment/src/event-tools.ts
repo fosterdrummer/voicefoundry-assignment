@@ -12,8 +12,7 @@ export type AppDeploymentProps = {
     artifactBucket: Bucket
 }
 
-export function getAppDeploymentProps(event: any): AppDeploymentProps{
-    const resourceProps = event['ResourceProperties']
+export function getAppDeploymentProps(resourceProps: any): AppDeploymentProps{
     return {
         codePipeline: new CodePipeline(resourceProps['codePipelineName']),
         frontendBucket: new Bucket(resourceProps['frontendBucketName']),
@@ -22,4 +21,12 @@ export function getAppDeploymentProps(event: any): AppDeploymentProps{
         pipelineBuilder: new BuildProject(resourceProps['pipelineBuilderName']),
         pipelineStack: new Stack(resourceProps['pipelineStackName'])
     }
+}
+
+export function getNewAppDeploymentProps(event: any){
+    return getAppDeploymentProps(event['ResourceProperties']);
+}
+
+export function getOldAppDeploymentProps(event: any){
+    return getAppDeploymentProps(event['OldResourceProperties']);
 }
