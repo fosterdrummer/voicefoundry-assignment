@@ -58,5 +58,8 @@ module.exports.handler = async (event: CloudFormationCustomResourceEvent) => {
 
     return {
         PhysicalResourceId: frontendBucket.name,
+        Data: {
+            frontendUrl: frontendBucket.getWebUrl()
+        }
     };
 }

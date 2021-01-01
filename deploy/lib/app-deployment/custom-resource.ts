@@ -23,6 +23,10 @@ export class AppDeploymentCustomResource extends cdk.Resource{
         } = props.pipelineBuilder;
 
         const {
+            appFullName
+        } = pipelineStack;
+
+        const {
             frontendBucketName,
             artifactBucketName,
             apiStackName,
@@ -46,7 +50,7 @@ export class AppDeploymentCustomResource extends cdk.Resource{
             onEventHandler: onEventHandler
         });
 
-        new cdk.CustomResource(this, 'AppDeploymentCustomResource', {
+        const customResource = new cdk.CustomResource(this, 'AppDeploymentCustomResource', {
             serviceToken: provider.serviceToken,
             resourceType: 'Custom::AppDeployment',
             properties: {
@@ -58,6 +62,10 @@ export class AppDeploymentCustomResource extends cdk.Resource{
                 apiStackName: apiStackName,
                 uuid: uuid.v4() //Ensure a deployment is ran during every Update
             }
+        });
+
+        new cdk.CfnOutput(this, `${appFullName}-FrontendUrl`, {
+            value: customResource.getAttString('frontendUrl')
         });
     }
 }

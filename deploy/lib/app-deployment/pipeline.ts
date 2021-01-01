@@ -36,7 +36,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
     public readonly apiStackName: string
     public readonly frontendBucketName: string
     public readonly artifactBucketName: string
-    private appFullName: string
+    public readonly appFullName: string
 
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps & cdk.StackProps){
         super(scope, id, props);

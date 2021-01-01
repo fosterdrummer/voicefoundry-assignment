@@ -1,9 +1,8 @@
+process.env.AWS_SDK_LOAD_CONFIG=true;
+
 const AWS = require('aws-sdk');
 
 const [githubkey, owmkey] = process.argv.slice(2);
-
-AWS.config.profile = process.env.AWS_PROFILE
-AWS.config.region = process.env.AWS_REGION;
 
 const secretsManager = new AWS.SecretsManager();
 

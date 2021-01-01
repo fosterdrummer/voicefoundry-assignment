@@ -10,6 +10,10 @@ export class Bucket{
         this.client = new AWS.S3();
     }
 
+    getWebUrl(){
+        return `http://${this.name}.s3-website.${AWS.config.region}.amazonaws.com`    
+    }
+
     async listObjectKeys(): Promise<(string|undefined)[]>{
         return this.client.listObjects({
             Bucket: this.name
