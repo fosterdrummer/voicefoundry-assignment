@@ -29,7 +29,10 @@ const getOwmClient = async () => {
         }
         return data.SecretString
     });
-    return new OwmApiClient(apiKey);
+    return new OwmApiClient({
+        apiKey: apiKey,
+        units: 'imperial'
+    });
 }
 
 const getTodaysWeather = async (): Promise<WeatherResponse> => {
