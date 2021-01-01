@@ -3,6 +3,8 @@ import * as lambda from '@aws-cdk/aws-lambda';
 import * as apiGw from '@aws-cdk/aws-apigateway';
 import * as ssm from '@aws-cdk/aws-ssm';
 import * as iam from '@aws-cdk/aws-iam';
+import * as sm from '@aws-cdk/aws-secretsmanager';
+import { Secret } from '@aws-cdk/aws-secretsmanager';
 
 const HttpMethod = {
     GET: 'GET'
@@ -30,6 +32,11 @@ export class ApiStack extends cdk.Stack{
             ...props.handlerProps,
         });
 
+        const secretArns = props.apiSecrets
+            .map(secretName => 
+                sm.Secret.fromSecretNameV2(this, `Secret-${secretName}`, secretName))
+            .map(secret => secret.secretArn);
+                
         apiHandler.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: [
@@ -37,8 +44,7 @@ export class ApiStack extends cdk.Stack{
                 "secretsmanager:DescribeSecret",
                 "secretsmanager:ListSecretVersionIds"
             ],
-            resources: props.apiSecrets.map(secret => 
-                `arn:aws:secretsmanager:${this.region}:${this.account}:secret:${secret}`)
+            resources: secretArns
         }));
 
         const api = new apiGw.LambdaRestApi(this, 'Api', {
