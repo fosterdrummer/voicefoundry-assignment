@@ -1,0 +1,21 @@
+version: 0.2
+env:
+  variables:
+    APP_SRC_DIR: app
+  parameter-store:
+    API_URL_VALUE: "${API_URL_PARAM_NAME}"
+phases:
+  install:
+    runtime_versions:
+      nodejs: 12
+    commands:
+     - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
+     - npm install
+  build:
+    commands:
+      - cd ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}
+      - REACT_APP_OWM_API_URL=${API_URL_VALUE} npm run build
+artifacts:
+  base-directory: ${CODEBUILD_SRC_DIR}/${APP_SRC_DIR}/build
+  files: 
+  - '**/*'
