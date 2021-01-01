@@ -9,27 +9,56 @@ import { GitHubSourceAction, GitHubSourceActionProps } from '@aws-cdk/aws-codepi
 import { cdkBuildSpec } from './cdk-buildspec';
 import { Effect } from '@aws-cdk/aws-iam';
 
+/**
+ * These buildspecs will be configured in the source build
+ * and integration test projects.
+ * 
+ * Having these props in place allows developers to define a build
+ * process tailored to their project.
+ */
 type BuildProps = {
     sourceBuildSpec: cb.BuildSpec
     integrationTestSpec?: cb.BuildSpec
 }
 
+/**
+ * Props needed to configure the S3 project that will host the frontend SPA
+ */
 type FrontendBucketProps = {
     indexDocument: string,
     errorDocument?: string
 }
 
 export type AppDeploymentPipelineProps = {
+    /**
+     * A short name for the app
+     */
     appName: string;
+    /**
+     * A target environment for the app (ex. dev, test, prod)
+     */
     appEnv: string;
+    /**
+     * Props needed to build the api stack
+     */
     apiStackProps: Omit<ApiStackProps, 'apiName'>;
+
     frontendBucketProps: FrontendBucketProps;
+    /**
+     * Props needed to configure the github source action for the pipeline
+     */
     githubSourceProps: Omit<GitHubSourceActionProps, 'actionName' | 'output'>;
+    /**
+     * Repo relative path to the directory containing this project
+     */
     cdkSubDirectory: string;
     frontendBuildProps: BuildProps;
     apiBuildProps: BuildProps;
 }
 
+/**
+ * Create a frontend S3 bucket and deployment pipeline for a given app
+ */
 export class AppDeploymentPipeline extends cdk.Stack{
 
     public readonly pipelineName: string

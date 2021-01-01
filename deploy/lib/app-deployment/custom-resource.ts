@@ -12,6 +12,19 @@ export interface AppDeploymentCustomResourceProps extends cdk.ResourceProps{
     pipelineBuilder: AppDeploymentPipelineBuilder
 }
 
+/**
+ * This custom resource orchestrates an app deployment/deletion.
+ * The onEvent handler defined in this resource will execute the following actions:
+ * 
+ * On CREATE/UPDATE:
+ * - Create/Update a code pipeline configured to deploy a given app and to a target environment
+ * - Deploy the app using the generated code pipeline
+ * 
+ * On DELETE:
+ * - Delete contents from the app and artifact buckets
+ * - Delete the app's api gateway stack
+ * - Delete the app's pipeline stack
+ */
 export class AppDeploymentCustomResource extends cdk.Resource{
 
     constructor(scope: cdk.Construct, id: string, props: AppDeploymentCustomResourceProps){

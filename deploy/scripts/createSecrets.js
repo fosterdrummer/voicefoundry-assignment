@@ -1,13 +1,17 @@
 process.env.AWS_SDK_LOAD_CONFIG=true;
 
 const AWS = require('aws-sdk');
+const { exit } = require('process');
 
 const [githubkey, owmkey] = process.argv.slice(2);
 
 const secretsManager = new AWS.SecretsManager();
 
 const withErrorLog = promise => 
-    promise.catch(error => console.log(error.message));
+    promise.catch(error => {
+        console.error(error.message);
+        exit(-1);
+    });
 
 withErrorLog(
     secretsManager.createSecret({

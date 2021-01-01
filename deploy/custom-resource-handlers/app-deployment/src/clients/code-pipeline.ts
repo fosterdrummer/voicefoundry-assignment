@@ -1,5 +1,4 @@
 import AWS from 'aws-sdk'
-import { exec } from 'child_process'
 
 export enum ExecutionResult{
     SUCCESS = 'Succeeded',

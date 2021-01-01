@@ -4,6 +4,10 @@ import * as iam from '@aws-cdk/aws-iam';
 import { AppDeploymentPipeline, AppDeploymentPipelineProps } from './pipeline'
 import { cdkBuildSpec } from './cdk-buildspec';
 
+/**
+ * This Construct will generate a CodeBuild "Pipeline Builder" project.
+ * The Pipeline Build project will be used to deploy the app's code pipeline
+ */
 export class AppDeploymentPipelineBuilder extends cdk.Construct{
     
     pipelineBuildProject: cb.Project
@@ -32,6 +36,7 @@ export class AppDeploymentPipelineBuilder extends cdk.Construct{
                 buildImage: cb.LinuxBuildImage.STANDARD_4_0
             }
         });
+        
         this.pipelineBuildProject.role?.addManagedPolicy(iam
             .ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'));
     }

@@ -3,10 +3,15 @@ import { AppDeploymentCustomResource } from './custom-resource';
 import { AppDeploymentPipelineProps } from './pipeline'
 import { AppDeploymentPipelineBuilder } from './pipeline-builder';
 
-export class AppDeployment extends cdk.Resource{
-    constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps & cdk.ResourceProps){
-        super(scope, id, props);
+/**
+ * Creates and executes a code pipeline tailored for a specific app and environment.
+ */
+export class AppDeployment extends cdk.Construct{
+    constructor(scope: cdk.Construct, id: string, props: AppDeploymentPipelineProps){
+        super(scope, id);
+
         const pipelineBuilder = new AppDeploymentPipelineBuilder(this, 'Builder', props);
+        
         new AppDeploymentCustomResource(this, 'AppDeploymentCR', {
             pipelineBuilder: pipelineBuilder
         });
