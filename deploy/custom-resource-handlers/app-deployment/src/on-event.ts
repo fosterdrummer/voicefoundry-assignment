@@ -1,4 +1,5 @@
-import { getAppDeploymentProps } from './event-tools'
+import { getAppDeploymentProps } from './event-tools';
+import { Bucket } from './clients/s3';
 import AWS from 'aws-sdk';
 
 AWS.config.region = process.env.REGION
@@ -34,11 +35,12 @@ module.exports.handler = async (event: any) => {
          * AppDeployment Config is present during an update.
          */
         if(requestType === 'Update'){
-            const oldFrontendBucketName = event['OldResourceProperties']['frontendBucketName']
+            const oldFrontendBucketName = event['OldResourceProperties']['frontendBucketName'];
+            const oldArtifactBucketName = event['OldResourceProperties']['artifactBucketName'];
             if(frontendBucket.name !== oldFrontendBucketName){
                 console.log('Deleting old bucket contents');
-                await frontendBucket.deleteAllObjects();
-                await artifactBucket.deleteAllObjects();
+                await new Bucket(oldFrontendBucketName).deleteAllObjects();
+                await new Bucket(oldArtifactBucketName).deleteAllObjects();
             }
         }
 
