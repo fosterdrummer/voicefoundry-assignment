@@ -65,6 +65,8 @@ This project implements an AppDeployment Construct, which uses a codebuild proje
 - Create/Update a code pipeline configured to deploy a given app and to a target environment
 - Deploy the app using the generated code pipeline
 
+*** A Quick Note: *** Making updates to an AppDeployment's properties will require you to push an update to GitHub before executing a stack update. Pushing your changes to github will ensure that the pipelinebuilder and code pipeline use the latest code when making updates. 
+
 The AppDeployment Construct will then execute the following actions during a Cloudformation Delete event:
 - Delete contents from the app and artifact buckets
 - Delete the app's api gateway stack
