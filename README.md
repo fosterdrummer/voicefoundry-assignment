@@ -57,7 +57,7 @@ Run the following command in the 'deploy' project to clean up the app resources:
 ```shell
     cdk destroy TulsaWeatherApp
 ```
-**Note:**You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
+**Note:** You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
 
 ## How does it work?
 
