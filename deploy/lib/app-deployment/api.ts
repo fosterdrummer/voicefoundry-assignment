@@ -35,7 +35,7 @@ export class ApiStack extends cdk.Stack{
         const secretArns = props.apiSecrets
             .map(secretName => 
                 sm.Secret.fromSecretNameV2(this, `Secret-${secretName}`, secretName))
-            .map(secret => secret.secretFullArn as string);
+            .map(secret => secret.secretArn + '-*');
 
         apiHandler.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
