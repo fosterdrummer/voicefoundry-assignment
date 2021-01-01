@@ -7,12 +7,12 @@ export class TulsaWeatherAppDeployment extends cdk.Stack{
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps){
         super(scope, id, props);
 
-        new AppDeployment(this, 'TestDeployment', {
+        new AppDeployment(this, 'Prod', {
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',
                 oauthToken: cdk.SecretValue.secretsManager('GitHub_PrivateToken'),
-                branch: 'develop'
+                branch: 'master'
             },
             apiStackProps: {
                 apiSecrets: ['Owm_ApiKey'],
@@ -28,7 +28,7 @@ export class TulsaWeatherAppDeployment extends cdk.Stack{
             },
             appName: 'tulsa-weather-app',
             cdkSubDirectory: 'deploy',
-            appEnv: 'test',
+            appEnv: 'prod',
             frontendBucketProps: {
                 indexDocument: 'index.html'
             },
