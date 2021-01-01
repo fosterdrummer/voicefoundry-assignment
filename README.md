@@ -75,5 +75,7 @@ The AppDeployment Construct will then execute the following actions during a Clo
 - Delete the app's api gateway stack
 - Delete the app's pipeline stack
 
+The AppDeployment Construct will fail if the the code pipeline finishes in a FAILED state during a deployment, or if other errors occure while creating/deleting downstream stacks.
+
 The AppDeployment Construct will produce the following infrastructure when deployed:
 ![Look like the image didn't load :(](vf-assignment-arch.jpg?raw=true "High level Architecture")
