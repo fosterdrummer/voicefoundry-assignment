@@ -28,7 +28,7 @@ export class TulsaWeatherAppDeployment extends cdk.Stack{
             },
             appName: 'tulsa-weather-app',
             cdkSubDirectory: 'deploy',
-            appEnv: 'prod',
+            appEnv: 'demo',
             frontendBucketProps: {
                 indexDocument: 'index.html'
             },

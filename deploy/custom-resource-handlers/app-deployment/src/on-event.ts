@@ -56,13 +56,12 @@ module.exports.handler = async (event: any) => {
         } else {
             pipelineExecutionId = await codePipeline.start();
         }
-        
+
         if(!pipelineExecutionId){
             throw 'No valid execution id found.';
         }
         
-        console.log('Starting deployment pipeline');
-        
+        console.log('Waiting for deployment pipeline to complete');
         await codePipeline.waitForExecutionToComplete(pipelineExecutionId);
     } else {
         console.log('Deleting bucket objects and apiStack.')
