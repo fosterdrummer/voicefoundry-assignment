@@ -1,6 +1,4 @@
 import * as cdk from '@aws-cdk/core';
-import * as sm from '@aws-cdk/aws-secretsmanager';
-
 import { BuildSpec } from '@aws-cdk/aws-codebuild';
 import { Runtime } from '@aws-cdk/aws-lambda';
 import { AppDeployment } from '../app-deployment/app-deployment';
@@ -17,6 +15,7 @@ export class DeployStack extends cdk.Stack{
                 branch: 'develop'
             },
             apiStackProps: {
+                apiSecrets: ['Owm_ApiKey'],
                 handlerProps: {
                     runtime: Runtime.NODEJS_12_X,
                     handler: 'src/index.handler',

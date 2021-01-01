@@ -2,6 +2,7 @@ import * as cdk from '@aws-cdk/core';
 import * as lambda from '@aws-cdk/aws-lambda';
 import * as apiGw from '@aws-cdk/aws-apigateway';
 import * as ssm from '@aws-cdk/aws-ssm';
+import * as iam from '@aws-cdk/aws-iam';
 
 const HttpMethod = {
     GET: 'GET'
@@ -9,6 +10,7 @@ const HttpMethod = {
 
 export interface ApiStackProps extends cdk.StackProps{
     readonly apiName: string;
+    readonly apiSecrets: string[]
     readonly handlerProps: Omit<lambda.FunctionProps, 'code' | 'functionName'>;
 }
 
@@ -27,6 +29,17 @@ export class ApiStack extends cdk.Stack{
             functionName: `${props.apiName}-handler`,
             ...props.handlerProps,
         });
+
+        apiHandler.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:ListSecretVersionIds"
+            ],
+            resources: props.apiSecrets.map(secret => 
+                `arn:aws:secretsmanager:${this.region}:${this.account}:secret:${secret}`)
+        }));
 
         const api = new apiGw.LambdaRestApi(this, 'Api', {
             handler: apiHandler,
