@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@types/aws-lambda": "^8.10.66",
+    "aws-sdk": "^2.820.0",
     "openweathermap-api-client": "^1.0.3"
   }
 }

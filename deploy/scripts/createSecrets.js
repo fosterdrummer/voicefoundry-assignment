@@ -7,13 +7,13 @@ AWS.config.region = region;
 const secretsManager = new AWS.SecretsManager();
 
 secretsManager.createSecret({
-    Name: 'GitHubVFPrivateToken',
+    Name: 'GitHub_PrivateToken',
     SecretString: githubkey
 }).promise().then(_ => 
     console.log('Github token uploaded successfully'));
 
 secretsManager.createSecret({
-    Name: 'OwmApiKey',
+    Name: 'Owm_ApiKey',
     SecretString: owmkey
 }).promise().then(_ => 
     console.log('Owm token uploaded successfully'));

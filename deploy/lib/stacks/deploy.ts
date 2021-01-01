@@ -13,7 +13,7 @@ export class DeployStack extends cdk.Stack{
             githubSourceProps: {
                 owner: 'fosterdrummer',
                 repo: 'voicefoundry-assignment',
-                oauthToken: cdk.SecretValue.secretsManager('RepoKey'),
+                oauthToken: cdk.SecretValue.secretsManager('GitHub_PrivateToken'),
                 branch: 'develop'
             },
             apiStackProps: {
@@ -21,8 +21,9 @@ export class DeployStack extends cdk.Stack{
                     runtime: Runtime.NODEJS_12_X,
                     handler: 'src/index.handler',
                     environment: {
-                        OPEN_WEATHER_MAP_API_KEY: '113161f05470d59fa6f2c364d7f2a897',
-                        OPEN_WEATHER_MAP_CITY_ID: '4553433'
+                        OPEN_WEATHER_MAP_SECRET_ID: 'Owm_ApiKey',
+                        OPEN_WEATHER_MAP_CITY_ID: '4553433',
+                        REGION: this.region
                     }
                 }
             },

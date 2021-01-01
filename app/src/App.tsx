@@ -52,7 +52,7 @@ class App extends React.Component{
 
   render(){
     return (
-      <div>
+      <div className='App'>
         <h1>Tulsa Weather App</h1>
         <div>{this.getResponse()}</div>
       </div>
