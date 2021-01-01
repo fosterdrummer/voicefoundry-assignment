@@ -50,7 +50,7 @@ Run the following commands to get the party started
     cdk deploy TulsaWeatherApp --profile <Your AWS Profile>
 ```
 
-The stack deployment will fail if the TulsaWeatherApp code pipeline does not complete successfully.
+The stack deployment will fail if the TulsaWeatherApp is not deployed successfully.
 
 ### Clean up
 Run the following command in the 'deploy' project to clean up the app resources: 
