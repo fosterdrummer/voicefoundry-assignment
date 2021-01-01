@@ -63,3 +63,17 @@ Run the following command in the 'deploy' project to clean up the app resources:
     cdk destroy TulsaWeatherApp
 ```
 *** NOTE: ***You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
+
+## How does it work?
+
+This project implements an AppDeployment Construct, which uses a codebuild project and Cloudformation custom resource to execute the following actions during a Cloudformation Create/Update event:
+- Create/Update a code pipeline configured to deploy a given app and to a target environment
+- Deploy the app using the generated code pipeline
+
+The AppDeployment Construct will then execute the following actions during a Cloudformation Delete event:
+- Delete contents from the app and artifact buckets
+- Delete the app's api gateway stack
+- Delete the app's pipeline stack
+
+The AppDeployment Construct will produce the following infrastructure when deployed:
+![Look like the image didn't load :(](vf-assignment-arch.jpg?raw=true "High level Architecture")
