@@ -14,7 +14,7 @@ This project requires an aws profile in ~.aws/config to retrieve environment con
 
 ### Secrets
 
-Secrets will be stored in AWS Secrets Manager after being passed to the 'doDemo' script described in the next section.
+Secrets will be stored in AWS Secrets Manager after being passed to the setup script described in the next section.
 
 You should have the following secrets in hand before starting the demo.
 
@@ -50,12 +50,7 @@ Run the following commands to get the party started
     cdk deploy TulsaWeatherApp --profile <Your AWS Profile>
 ```
 
-The TulsaWeatherApp stack uses an AppDeployment custom resource to:
-- Create a code pipeline configured the deploy the tulsa weather app
-- Execute the pipeline (For Create and Update events)
-- Wait for the pipeline to complete successfully
-
-The stack deployment will fail if the TulsaWeatherApp code pipeline does not complete successfully.
+The stack deployment will fail if the TulsaWeatherApp is not deployed successfully.
 
 ### Clean up
 Run the following command in the 'deploy' project to clean up the app resources: 
