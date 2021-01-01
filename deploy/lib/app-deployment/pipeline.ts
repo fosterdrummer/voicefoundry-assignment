@@ -149,7 +149,8 @@ export class AppDeploymentPipeline extends cdk.Stack{
                     buildProjectName: 'build-api-source',
                     buildSpec: apiBuildProps.sourceBuildSpec,
                     input: sourceCode,
-                    outputs: [apiRelease]
+                    outputs: [apiRelease],
+                    accessPolicyStatement: ssmReadAccess
                 }),
                 this.getBuildAction({
                     actionName: 'BuildCloudAssembly',
@@ -170,7 +171,7 @@ export class AppDeploymentPipeline extends cdk.Stack{
          * Deploy the app resources and test the api
          */
         const deployCdkAppAction = new cpActions.CloudFormationCreateUpdateStackAction({
-            actionName: 'DeployCdkApp',
+            actionName: 'DeployApi',
             stackName: apiStack.stackName,
             templatePath: cloudAssembly.atPath(`${apiStack.stackName}.template.json`),
             adminPermissions: true,
