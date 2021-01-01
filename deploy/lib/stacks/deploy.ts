@@ -2,6 +2,7 @@ import * as cdk from '@aws-cdk/core';
 import { BuildSpec } from '@aws-cdk/aws-codebuild';
 import { Runtime } from '@aws-cdk/aws-lambda';
 import { AppDeployment } from '../app-deployment/app-deployment';
+import { Secret } from '@aws-cdk/aws-secretsmanager';
 
 export class DeployStack extends cdk.Stack{
     constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps){
