@@ -1,7 +1,7 @@
 version: 0.2
 env:
   variables:
-    APP_SRC_DIR: tulsa-weather-api/handler
+    APP_SRC_DIR: api
 phases:
   install:
     runtime_versions:

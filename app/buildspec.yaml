@@ -1,7 +1,7 @@
 version: 0.2
 env:
   variables:
-    APP_SRC_DIR: tulsa-weather-app/react-app
+    APP_SRC_DIR: app
   parameter-store:
     API_URL_VALUE: "${API_URL_PARAM_NAME}"
 phases:
