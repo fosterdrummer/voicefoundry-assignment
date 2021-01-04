@@ -42,7 +42,7 @@ Use the following command to get things setup:
 ```
 
 ### Deploy
-Will everything setup on your local machine, it's time to deploy to AWS!
+With everything setup on your local machine, it's time to deploy to AWS!
 
 Run the following commands to get the party started
 ```shell
@@ -55,14 +55,14 @@ The stack deployment will fail if the TulsaWeatherApp is not deployed successful
 ### Clean up
 Run the following command in the 'deploy' project to clean up the app resources: 
 ```shell
-    cdk destroy TulsaWeatherApp
+    cdk destroy TulsaWeatherApp --profile <Your AWS Profile>
 ```
 **Note:** You will need to delete the secrets manually after the TulsaWeatherApp stack is destroyed.
 
 ## How does it work?
 
 This project implements an AppDeployment Construct, which uses a codebuild project and Cloudformation custom resource to execute the following actions during a Cloudformation Create/Update event:
-- Create/Update a code pipeline configured to deploy a given app and to a target environment
+- Create/Update a code pipeline configured to deploy a given app to a target environment
 - Deploy the app using the generated code pipeline
 
 **Note:** Making updates to an AppDeployment's properties will require you to push an update to GitHub before executing a stack update. Pushing your changes to github will ensure that the pipelinebuilder and code pipeline use the latest code when making updates. 
@@ -74,5 +74,5 @@ The AppDeployment Construct will then execute the following actions during a Clo
 
 The AppDeployment Construct will fail if the the code pipeline finishes in a FAILED state during a deployment, or if other errors occure while creating/deleting downstream stacks.
 
-The AppDeployment Construct will produce the following infrastructure when deployed:
+Here is a diagram showing the resources produced by the AppDeployment Construct:
 ![Look like the image didn't load :(](vf-assignment-arch.jpg?raw=true "High level Architecture")
